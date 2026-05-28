@@ -120,6 +120,30 @@ textarea { min-height: 80px; resize: vertical; }
 
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
+.content-filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(55,213,255,.22);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(55,213,255,.08), rgba(139,92,246,.06)), #0f1828;
+}
+
+.content-filters .field { margin-bottom: 0; }
+.content-filters button { width: 100%; }
+
+@media (min-width: 700px) {
+  .content-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .content-filters .filter-search { grid-column: span 2; }
+}
+
+@media (min-width: 980px) {
+  .content-filters { grid-template-columns: 2fr repeat(5, 1fr); }
+  .content-filters .filter-search { grid-column: auto; }
+}
+
 button {
   border: 1px solid transparent;
   border-radius: 10px;
