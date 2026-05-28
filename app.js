@@ -18,6 +18,7 @@ const defaultState = {
 let state = loadState();
 let editClipId = null;
 let editContentId = null;
+const contentFilters = { search: '', platform: '', status: '', type: '', sort: 'newest' };
 
 // DOM Elements
 const streamFields = [
@@ -135,6 +136,102 @@ function generateHookFromClip(clip) {
   return `POV: ${title} turned into a must-post ${clip.type || 'stream clip'} moment.`;
 }
 
+function getTime(value) {
+  const time = Date.parse(value || '');
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function getFilteredContentIdeas() {
+  const search = contentFilters.search.toLowerCase();
+  return state.contentIdeas
+    .filter(i => !search || [i.title, i.hook, i.caption, i.notes].some(value => String(value || '').toLowerCase().includes(search)))
+    .filter(i => !contentFilters.platform || i.platform === contentFilters.platform)
+    .filter(i => !contentFilters.status || i.status === contentFilters.status)
+    .filter(i => !contentFilters.type || i.type === contentFilters.type)
+    .sort((a, b) => {
+      if (contentFilters.sort === 'oldest') return getTime(a.createdAt) - getTime(b.createdAt);
+      if (contentFilters.sort === 'due') return (a.dueDate ? getTime(a.dueDate) : Infinity) - (b.dueDate ? getTime(b.dueDate) : Infinity);
+      if (contentFilters.sort === 'status') return CONTENT_STATUSES.indexOf(a.status) - CONTENT_STATUSES.indexOf(b.status) || getTime(b.createdAt) - getTime(a.createdAt);
+      return getTime(b.createdAt) - getTime(a.createdAt);
+    });
+}
+
+function getHelperInputs() {
+  const topic = helperTopic.value.trim() || 'this creator moment';
+  const takeaway = helperTakeaway.value.trim() || 'the key moment lands better than expected';
+  return {
+    platform: helperPlatform.value,
+    type: helperType.value,
+    tone: helperTone.value,
+    topic,
+    takeaway
+  };
+}
+
+function buildHookIdeas({ platform, type, tone, topic, takeaway }) {
+  const hooksByTone = {
+    hype: [
+      `This ${type} went from warmup to full send in seconds`,
+      `Don't blink—${topic} just hit race pace`,
+      `The moment ${takeaway} changed the whole run`,
+      `${platform} needs to see this ${type}`,
+      `From sketchy entry to highlight reel: ${topic}`
+    ],
+    funny: [
+      `I swear this was totally part of the plan`,
+      `When ${topic} chooses chaos but you keep recording`,
+      `The car had one job—and ${takeaway}`,
+      `POV: your ${type} becomes accidental comedy`,
+      `Me pretending I meant to do that the whole time`
+    ],
+    educational: [
+      `Here's what ${topic} teaches about cleaner driving`,
+      `Watch how one adjustment makes ${takeaway}`,
+      `If your setup feels off, study this ${type}`,
+      `The simple takeaway from this run: ${takeaway}`,
+      `Breaking down why this ${type} worked`
+    ],
+    cinematic: [
+      `${topic}, but make it feel like the final lap`,
+      `Every creator needs a moment where ${takeaway}`,
+      `The quiet before the cleanest part of the run`,
+      `A small moment, a big shift, and one clean line`,
+      `This ${type} has main-character energy`
+    ],
+    casual: [
+      `Quick look at ${topic}`,
+      `This part stood out from the session`,
+      `Trying something different and ${takeaway}`,
+      `A little ${type} moment worth saving`,
+      `What do you think of this run?`
+    ]
+  };
+  return hooksByTone[tone] || hooksByTone.hype;
+}
+
+function buildCaption({ platform, type, tone, topic, takeaway }) {
+  const intros = {
+    hype: 'Had to save this one for the feed.',
+    funny: 'Not everything goes to plan, and that is usually the best part.',
+    educational: 'Small details make a big difference once the pace comes up.',
+    cinematic: 'Some moments just feel bigger when the line comes together.',
+    casual: 'Quick clip from the latest session.'
+  };
+  return `${intros[tone] || intros.casual} ${topic} turned into a ${type} for ${platform}, and the big takeaway was: ${takeaway}. What should I try next?`;
+}
+
+function buildHashtags({ platform, type, tone, topic }) {
+  const platformTags = platform === 'YouTube Video' ? ['#YouTubeCreator', '#CreatorTips'] : ['#Shorts', '#ContentCreator'];
+  const typeTags = type === 'tutorial' ? ['#Tutorial', '#LearnWithMe'] : type === 'meme' ? ['#GamingMeme', '#CreatorMeme'] : ['#SimRacing', '#CarContent'];
+  const toneTags = tone === 'funny' ? ['#FunnyClips'] : tone === 'educational' ? ['#HowTo'] : tone === 'cinematic' ? ['#Cinematic'] : ['#Racing'];
+  const topicTag = '#' + topic.replace(/[^a-z0-9]+/gi, '').slice(0, 24);
+  return [...platformTags, ...typeTags, ...toneTags, '#Streaming', '#Gaming', topicTag].filter(tag => tag.length > 1).join(' ');
+}
+
+function renderHookOptions(hooks) {
+  hookOptions.innerHTML = hooks.map(hook => `<button type="button" class="hook-option" data-hook="${escapeHtml(hook)}">${escapeHtml(hook)}</button>`).join('');
+}
+
 // Build forms dynamically to keep structure easy to edit later.
 function buildForms() {
   const streamForm = document.getElementById('streamForm');
@@ -185,8 +282,9 @@ function renderClips() {
 
 function renderContent() {
   const holder = document.getElementById('contentList');
+  const filteredIdeas = getFilteredContentIdeas();
   const columns = CONTENT_STATUSES.map(status => {
-    const ideas = state.contentIdeas.filter(i => i.status === status);
+    const ideas = filteredIdeas.filter(i => i.status === status);
     const cards = ideas.length ? ideas.map(i => `
       <article class="item">
         <h3>${escapeHtml(i.title || '(Untitled idea)')}</h3>
@@ -199,7 +297,9 @@ function renderContent() {
     return `<section class="kanban-column"><h3>${escapeHtml(status)} (${ideas.length})</h3><div class="kanban-stack">${cards}</div></section>`;
   });
   holder.innerHTML = state.contentIdeas.length ? columns.join('') : '<p class="small">No content ideas yet.</p>';
+  if (state.contentIdeas.length && !filteredIdeas.length) holder.innerHTML = '<p class="small">No content ideas match the current filters.</p>';
 }
+
 
 function renderDashboard() {
   document.getElementById('kpiClips').textContent = state.clips.length;
@@ -320,23 +420,31 @@ function wireEvents() {
     editContentId = null; document.getElementById('updateContent').disabled = true; contentForm.reset(); saveState();
   };
 
-  const hooks = [
-    'This tune completely changed the car…',
-    'I finally fixed the drift setup…',
-    'POV: you found the perfect corner entry…',
-    'The cleanest run I’ve had all week.',
-    'From understeer to dialed-in in one session.',
-    'Watch this lap delta drop in real time.'
-  ];
-  const captions = [
-    'Tonight\'s setup notes in the comments. What should I test next?',
-    'Rate this line 1-10. Would you brake later here?',
-    'Built for consistency over one-lap pace—worth it?',
-    'Clip from stream practice. Full session recap coming next.'
-  ];
+  ['search','platform','status','type','sort'].forEach(key => {
+    const control = document.getElementById('contentFilter_'+key);
+    control.oninput = control.onchange = () => {
+      contentFilters[key] = control.value;
+      renderContent();
+    };
+  });
 
-  genHook.onclick = () => helperOutput.value = hooks[Math.floor(Math.random()*hooks.length)];
-  genCaption.onclick = () => helperOutput.value = captions[Math.floor(Math.random()*captions.length)];
+  document.getElementById('clearContentFilters').onclick = () => {
+    Object.assign(contentFilters, { search: '', platform: '', status: '', type: '', sort: 'newest' });
+    ['search','platform','status','type','sort'].forEach(key => document.getElementById('contentFilter_'+key).value = contentFilters[key]);
+    renderContent();
+  };
+
+  genHook.onclick = () => {
+    const hooks = buildHookIdeas(getHelperInputs());
+    renderHookOptions(hooks);
+    helperOutput.value = hooks.join('\n');
+  };
+  genCaption.onclick = () => helperOutput.value = buildCaption(getHelperInputs());
+  genHashtags.onclick = () => helperOutput.value = buildHashtags(getHelperInputs());
+  hookOptions.onclick = e => {
+    if (!e.target.classList.contains('hook-option')) return;
+    helperOutput.value = e.target.dataset.hook;
+  };
   copyHelper.onclick = async () => {
     try { await navigator.clipboard.writeText(helperOutput.value || ''); }
     catch { alert('Copy failed. You can still select and copy manually.'); }
