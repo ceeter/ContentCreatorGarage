@@ -170,6 +170,30 @@
 
     .small { font-size: .82rem; color: var(--muted); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .kanban-column {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #0f1828;
+      padding: 10px;
+    }
+
+    .kanban-column h3 { margin: 0 0 8px; font-size: .95rem; color: #bfe8ff; }
+    .kanban-stack { display: grid; gap: 8px; }
+
+    @media (min-width: 860px) {
+      .kanban-board {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: start;
+      }
+    }
   </style>
 </head>
 <body>
@@ -217,7 +241,7 @@
       <section class="card full">
         <h2>4) Content Queue</h2>
         <form id="contentForm"></form>
-        <div id="contentList" class="items"></div>
+        <div id="contentList" class="kanban-board"></div>
       </section>
 
       <section class="card full">
@@ -257,12 +281,40 @@
       return `<div class="field"><label for="${name}">${label}</label><input id="${name}" type="${type}"></div>`;
     }
 
+
+    function normalizeContentIdea(idea = {}) {
+      const nowIso = new Date().toISOString();
+      const status = CONTENT_STATUSES.includes(idea.status) ? idea.status : 'idea';
+      return {
+        id: idea.id || uid(),
+        title: idea.title || '',
+        platform: idea.platform || 'TikTok',
+        type: idea.type || 'stream clip',
+        status,
+        hook: idea.hook || '',
+        caption: idea.caption || '',
+        notes: idea.notes || '',
+        dueDate: idea.dueDate || '',
+        postedUrl: idea.postedUrl || '',
+        createdAt: idea.createdAt || nowIso,
+        updatedAt: idea.updatedAt || nowIso
+      };
+    }
+
+    function normalizeState(rawState) {
+      const merged = { ...structuredClone(defaultState), ...(rawState || {}) };
+      if (!Array.isArray(merged.clips)) merged.clips = [];
+      if (!Array.isArray(merged.contentIdeas)) merged.contentIdeas = [];
+      merged.contentIdeas = merged.contentIdeas.map(normalizeContentIdea);
+      return merged;
+    }
+
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? { ...defaultState, ...JSON.parse(raw) } : structuredClone(defaultState);
+        return raw ? normalizeState(JSON.parse(raw)) : normalizeState(defaultState);
       } catch {
-        return structuredClone(defaultState);
+        return normalizeState(defaultState);
       }
     }
 
@@ -294,9 +346,11 @@
 
       document.getElementById('contentForm').innerHTML = `
         <div class="row two">${createField('content_title','Content title')}<div class="field"><label for="content_platform">Platform</label><select id="content_platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>YouTube Video</option><option>Other</option></select></div></div>
-        <div class="row two"><div class="field"><label for="content_type">Content type</label><select id="content_type"><option>stream clip</option><option>car photo</option><option>tune video</option><option>before/after</option><option>tutorial</option><option>meme</option><option>other</option></select></div><div class="field"><label for="content_status">Status</label><select id="content_status"><option>idea</option><option>recorded</option><option>editing</option><option>scheduled</option><option>posted</option></select></div></div>
+        <div class="row two"><div class="field"><label for="content_type">Content type</label><select id="content_type"><option>stream clip</option><option>car photo</option><option>tune video</option><option>before/after</option><option>tutorial</option><option>meme</option><option>other</option></select></div><div class="field"><label for="content_status">Status</label><select id="content_status">${CONTENT_STATUSES.map(status => `<option>${status}</option>`).join('')}</select></div></div>
         ${createField('content_hook','Hook text')}
-        ${createField('content_caption','Caption notes','textarea')}
+        ${createField('content_caption','Caption','textarea')}
+        ${createField('content_notes','Notes','textarea')}
+        <div class="row two">${createField('content_dueDate','Due date','date')}${createField('content_postedUrl','Posted URL','url')}</div>
         <div class="actions"><button type="button" id="addContent" class="primary">Add content idea</button><button type="button" id="updateContent" class="alt" disabled>Edit idea</button></div>`;
     }
 
@@ -317,14 +371,20 @@
 
     function renderContent() {
       const holder = document.getElementById('contentList');
-      holder.innerHTML = state.contentIdeas.length ? state.contentIdeas.map(i => `
-        <article class="item">
-          <h3>${escapeHtml(i.title || '(Untitled idea)')}</h3>
-          <div class="meta"><span>${escapeHtml(i.platform)}</span><span>${escapeHtml(i.type)}</span><span class="pill ${i.status==='posted'?'posted':''}">${escapeHtml(i.status)}</span></div>
-          <p><strong>Hook:</strong> ${escapeHtml(i.hook || '-')}</p>
-          <p><strong>Caption:</strong> ${escapeHtml(i.caption || '-')}</p>
-          <div class="actions"><button type="button" onclick="startEditContent('${i.id}')">Edit idea</button><button type="button" class="danger" onclick="deleteContent('${i.id}')">Delete idea</button></div>
-        </article>`).join('') : '<p class="small">No content ideas yet.</p>';
+      const columns = CONTENT_STATUSES.map(status => {
+        const ideas = state.contentIdeas.filter(i => i.status === status);
+        const cards = ideas.length ? ideas.map(i => `
+          <article class="item">
+            <h3>${escapeHtml(i.title || '(Untitled idea)')}</h3>
+            <div class="meta"><span>${escapeHtml(i.platform)}</span><span>${escapeHtml(i.type)}</span><span class="pill ${i.status==='posted'?'posted':''}">${escapeHtml(i.status)}</span></div>
+            <p><strong>Hook:</strong> ${escapeHtml(i.hook || '-')}</p>
+            ${i.dueDate ? `<p><strong>Due:</strong> ${escapeHtml(i.dueDate)}</p>` : ''}
+            ${i.postedUrl ? `<p><strong>Posted URL:</strong> <a href="${escapeHtml(i.postedUrl)}" target="_blank" rel="noopener noreferrer">Open link</a></p>` : ''}
+            <div class="actions"><button type="button" onclick="startEditContent('${i.id}')">Edit</button><button type="button" class="danger" onclick="deleteContent('${i.id}')">Delete</button><button type="button" class="primary" onclick="advanceContentStatus('${i.id}')" ${i.status === 'posted' ? 'disabled' : ''}>Move status forward</button></div>
+          </article>`).join('') : '<p class="small">No items in this status.</p>';
+        return `<section class="kanban-column"><h3>${escapeHtml(status)} (${ideas.length})</h3><div class="kanban-stack">${cards}</div></section>`;
+      });
+      holder.innerHTML = state.contentIdeas.length ? columns.join('') : '<p class="small">No content ideas yet.</p>';
     }
 
     function renderDashboard() {
@@ -359,8 +419,17 @@
     window.startEditContent = function(id) {
       const i = state.contentIdeas.find(x => x.id === id); if (!i) return;
       editContentId = id;
-      ['title','platform','type','hook','caption','status'].forEach(k => document.getElementById('content_'+k).value = i[k] || '');
+      ['title','platform','type','hook','caption','notes','status','dueDate','postedUrl'].forEach(k => document.getElementById('content_'+k).value = i[k] || '');
       document.getElementById('updateContent').disabled = false;
+    };
+
+    window.advanceContentStatus = function(id) {
+      const i = state.contentIdeas.find(x => x.id === id); if (!i) return;
+      const currentIndex = CONTENT_STATUSES.indexOf(i.status);
+      if (currentIndex < 0 || currentIndex >= CONTENT_STATUSES.length - 1) return;
+      i.status = CONTENT_STATUSES[currentIndex + 1];
+      i.updatedAt = new Date().toISOString();
+      saveState();
     };
 
     window.deleteContent = function(id) {
@@ -395,7 +464,8 @@
       };
 
       document.getElementById('addContent').onclick = () => {
-        const idea = { id: uid(), title: content_title.value.trim(), platform: content_platform.value, type: content_type.value, hook: content_hook.value.trim(), caption: content_caption.value.trim(), status: content_status.value };
+        const nowIso = new Date().toISOString();
+        const idea = normalizeContentIdea({ id: uid(), title: content_title.value.trim(), platform: content_platform.value, type: content_type.value, hook: content_hook.value.trim(), caption: content_caption.value.trim(), notes: content_notes.value.trim(), status: content_status.value, dueDate: content_dueDate.value, postedUrl: content_postedUrl.value.trim(), createdAt: nowIso, updatedAt: nowIso });
         state.contentIdeas.unshift(idea);
         contentForm.reset();
         saveState();
@@ -404,7 +474,7 @@
       document.getElementById('updateContent').onclick = () => {
         if (!editContentId) return;
         const i = state.contentIdeas.find(x => x.id === editContentId); if (!i) return;
-        Object.assign(i, { title: content_title.value.trim(), platform: content_platform.value, type: content_type.value, hook: content_hook.value.trim(), caption: content_caption.value.trim(), status: content_status.value });
+        Object.assign(i, normalizeContentIdea({ ...i, title: content_title.value.trim(), platform: content_platform.value, type: content_type.value, hook: content_hook.value.trim(), caption: content_caption.value.trim(), notes: content_notes.value.trim(), status: content_status.value, dueDate: content_dueDate.value, postedUrl: content_postedUrl.value.trim(), updatedAt: new Date().toISOString() }));
         editContentId = null; document.getElementById('updateContent').disabled = true; contentForm.reset(); saveState();
       };
 
@@ -445,7 +515,7 @@
         try {
           const text = await file.text();
           const parsed = JSON.parse(text);
-          state = { ...structuredClone(defaultState), ...parsed };
+          state = normalizeState(parsed);
           saveState();
           alert('Import successful.');
         } catch {
