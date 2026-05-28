@@ -15,16 +15,16 @@ const defaultState = {
   contentIdeas: []
 };
 
-let state = loadState();
-let editClipId = null;
-let editContentId = null;
-const contentFilters = { search: '', platform: '', status: '', type: '', sort: 'newest' };
-
 // DOM Elements
 const streamFields = [
   ['title','Stream title'],['platform','Platform'],['game','Game'],['car','Car/build'],
   ['track','Track/activity'],['goals','Goals for tonight'],['challenge','Viewer challenge idea'],['notes','Notes']
 ];
+
+let state = loadState();
+let editClipId = null;
+let editContentId = null;
+const contentFilters = { search: '', platform: '', status: '', type: '', sort: 'newest' };
 
 function createField(name, label, type='text') {
   if (type === 'textarea') return `<div class="field"><label for="${name}">${label}</label><textarea id="${name}"></textarea></div>`;
@@ -141,6 +141,29 @@ function getTime(value) {
   return Number.isNaN(time) ? 0 : time;
 }
 
+function toDateKey(date) {
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function getNextSevenDays() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+    return { date, key: toDateKey(date) };
+  });
+}
+
+function formatPlannerDate(date) {
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function getIdeasDueBetween(dateKeys) {
+  return state.contentIdeas.filter(i => dateKeys.includes(i.dueDate));
+}
+
 function getFilteredContentIdeas() {
   const search = contentFilters.search.toLowerCase();
   return state.contentIdeas
@@ -204,6 +227,29 @@ function renderClips() {
   }).join('') : '<p class="small">No clips logged yet.</p>';
 }
 
+function renderWeeklyPlanner() {
+  const days = getNextSevenDays();
+  const dayKeys = days.map(day => day.key);
+  const weeklyIdeas = getIdeasDueBetween(dayKeys);
+  const summary = [
+    ['Total scheduled this week', weeklyIdeas.filter(i => i.status === 'scheduled').length],
+    ['Ready to post', weeklyIdeas.filter(i => i.status === 'ready to post').length],
+    ['Posted this week', weeklyIdeas.filter(i => i.status === 'posted').length]
+  ];
+  document.getElementById('weeklySummary').innerHTML = summary.map(([label, value]) => `
+    <div class="weekly-stat"><div class="value">${value}</div><div class="label">${label}</div></div>`).join('');
+  document.getElementById('weeklyPlanner').innerHTML = days.map(day => {
+    const ideas = state.contentIdeas.filter(i => i.dueDate === day.key);
+    const items = ideas.length ? ideas.map(i => `
+      <li><span>${escapeHtml(i.title || '(Untitled idea)')}</span><span class="pill ${i.status==='posted'?'posted':''}">${escapeHtml(i.status)}</span></li>`).join('') : '<li class="small">No planned items.</li>';
+    return `
+      <article class="planner-day">
+        <div class="planner-day-header"><div><h3>${escapeHtml(formatPlannerDate(day.date))}</h3><p class="small mono">${escapeHtml(day.key)}</p></div><button type="button" class="primary" onclick="quickAddScheduledContent('${day.key}')">Quick add</button></div>
+        <ul>${items}</ul>
+      </article>`;
+  }).join('');
+}
+
 function renderContent() {
   const holder = document.getElementById('contentList');
   const filteredIdeas = getFilteredContentIdeas();
@@ -234,7 +280,7 @@ function renderDashboard() {
   document.getElementById('kpiStream').textContent = s.title ? `${s.title} • ${s.platform || 'Platform?'}` : 'No plan';
 }
 
-function renderAll() { renderStreamForm(); renderClips(); renderContent(); renderDashboard(); }
+function renderAll() { renderStreamForm(); renderClips(); renderWeeklyPlanner(); renderContent(); renderDashboard(); }
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -272,6 +318,20 @@ window.turnClipIntoContentIdea = function(id) {
     caption: clip.description ? `Clip description: ${clip.description}` : '',
     notes: `Original clip timestamp: ${clip.timestamp || 'No time'}\nPriority: ${clip.priority || 'medium'}`,
     sourceClipId: id,
+    createdAt: nowIso,
+    updatedAt: nowIso
+  }));
+  saveState();
+};
+
+window.quickAddScheduledContent = function(dueDate) {
+  const nowIso = new Date().toISOString();
+  state.contentIdeas.unshift(normalizeContentIdea({
+    id: uid(),
+    title: 'New scheduled post',
+    platform: 'TikTok',
+    status: 'scheduled',
+    dueDate,
     createdAt: nowIso,
     updatedAt: nowIso
   }));
