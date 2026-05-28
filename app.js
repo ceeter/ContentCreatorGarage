@@ -358,23 +358,98 @@ function wireEvents() {
     renderContent();
   };
 
-  const hooks = [
-    'This tune completely changed the car…',
-    'I finally fixed the drift setup…',
-    'POV: you found the perfect corner entry…',
-    'The cleanest run I’ve had all week.',
-    'From understeer to dialed-in in one session.',
-    'Watch this lap delta drop in real time.'
-  ];
-  const captions = [
-    'Tonight\'s setup notes in the comments. What should I test next?',
-    'Rate this line 1-10. Would you brake later here?',
-    'Built for consistency over one-lap pace—worth it?',
-    'Clip from stream practice. Full session recap coming next.'
-  ];
+  const hookTemplates = {
+    hype: [
+      'This {type} went from normal to full send in seconds.',
+      'I did not expect {topic} to turn into this.',
+      'The moment {takeaway} changed the whole run.',
+      'Wait for the part where {takeaway}.',
+      '{platform} needs to see this {type}.'
+    ],
+    funny: [
+      'POV: {topic} had other plans.',
+      'I called this a strategy. The car called it comedy.',
+      'Everything was fine until {takeaway}.',
+      'This {type} is why my chat does not trust me.',
+      'Me: “one clean run.” Also me: {takeaway}.'
+    ],
+    educational: [
+      'Here is what {topic} taught me in one {type}.',
+      'The key detail: {takeaway}.',
+      'If you struggle with {topic}, watch this part first.',
+      'Breaking down why {takeaway} matters.',
+      'One small adjustment made this {type} click.'
+    ],
+    cinematic: [
+      'No commentary needed—just {topic} and the moment everything lined up.',
+      'The calm before {takeaway}.',
+      'Every frame of this {type} felt like a final lap.',
+      '{topic}, but make it movie mode.',
+      'That split second when {takeaway}.'
+    ],
+    casual: [
+      'Quick clip from {topic}.',
+      'This {type} had a little bit of everything.',
+      'Not perfect, but {takeaway}.',
+      'Trying something new with {topic}.',
+      'What would you do differently here?'
+    ]
+  };
+  const captionTemplates = {
+    hype: 'Full-send moment from {topic}. {takeaway}. Would you send it or play it safe?',
+    funny: 'I had a plan for {topic}, then the clip wrote its own punchline. {takeaway}.',
+    educational: 'Small details matter in {topic}. The big takeaway: {takeaway}. Save this for your next run, stream, or edit.',
+    cinematic: '{topic} in focus. {takeaway}. Sometimes the best moments are the ones that feel effortless.',
+    casual: 'Quick {type} for {platform}: {topic}. {takeaway}. What should I try next?'
+  };
+  const hashtagSets = {
+    'stream clip': ['#streamer', '#streamclip', '#gaming', '#creator'],
+    'hot lap': ['#simracing', '#hotlap', '#racing', '#motorsport'],
+    tutorial: ['#tutorial', '#howto', '#creatorTips', '#learn'],
+    reaction: ['#reaction', '#gaming', '#streamer', '#contentcreator'],
+    'car build': ['#carbuild', '#cars', '#simracing', '#garage'],
+    meme: ['#meme', '#gamingmemes', '#carmemes', '#streamer'],
+    'behind the scenes': ['#bts', '#creatorlife', '#streamsetup', '#contentcreator'],
+    other: ['#contentcreator', '#gaming', '#cars', '#streamer']
+  };
 
-  genHook.onclick = () => helperOutput.value = hooks[Math.floor(Math.random()*hooks.length)];
-  genCaption.onclick = () => helperOutput.value = captions[Math.floor(Math.random()*captions.length)];
+  function helperData() {
+    const topic = helperTopic.value.trim() || 'this run';
+    const takeaway = helperTakeaway.value.trim() || 'the key moment finally clicked';
+    return { platform: helperPlatform.value, type: helperType.value, vibe: helperVibe.value, topic, takeaway };
+  }
+
+  function fillTemplate(template, data) {
+    return template
+      .replaceAll('{platform}', data.platform)
+      .replaceAll('{type}', data.type)
+      .replaceAll('{vibe}', data.vibe)
+      .replaceAll('{topic}', data.topic)
+      .replaceAll('{takeaway}', data.takeaway);
+  }
+
+  function renderHookOptions(hooks) {
+    hookOptions.innerHTML = hooks.map(hook => `<button type="button" class="ghost hook-choice">${escapeHtml(hook)}</button>`).join('');
+    hookOptions.querySelectorAll('button').forEach(button => {
+      button.onclick = () => helperOutput.value = button.textContent;
+    });
+  }
+
+  genHook.onclick = () => {
+    const data = helperData();
+    const hooks = hookTemplates[data.vibe].map(template => fillTemplate(template, data));
+    renderHookOptions(hooks);
+    helperOutput.value = hooks.join('\n');
+  };
+  genCaption.onclick = () => {
+    const data = helperData();
+    helperOutput.value = fillTemplate(captionTemplates[data.vibe], data);
+  };
+  genHashtags.onclick = () => {
+    const data = helperData();
+    const platformTags = data.platform === 'Twitch' ? ['#twitch', '#livestream'] : data.platform === 'YouTube Video' ? ['#youtube', '#creator'] : ['#shorts', '#reels'];
+    helperOutput.value = [...hashtagSets[data.type], ...platformTags, `#${data.vibe}`].join(' ');
+  };
   copyHelper.onclick = async () => {
     try { await navigator.clipboard.writeText(helperOutput.value || ''); }
     catch { alert('Copy failed. You can still select and copy manually.'); }

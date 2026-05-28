@@ -119,6 +119,8 @@ textarea { min-height: 80px; resize: vertical; }
 @media (min-width: 560px) { .row.two { grid-template-columns: 1fr 1fr; } }
 
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.hook-options { display: grid; gap: 8px; margin-top: 10px; }
+.hook-choice { text-align: left; }
 
 .content-filters {
   display: grid;
