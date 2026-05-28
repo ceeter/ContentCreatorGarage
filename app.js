@@ -18,6 +18,7 @@ const defaultState = {
 let state = loadState();
 let editClipId = null;
 let editContentId = null;
+const contentFilters = { search: '', platform: '', status: '', type: '', sort: 'newest' };
 
 // DOM Elements
 const streamFields = [
@@ -135,6 +136,26 @@ function generateHookFromClip(clip) {
   return `POV: ${title} turned into a must-post ${clip.type || 'stream clip'} moment.`;
 }
 
+function getTime(value) {
+  const time = Date.parse(value || '');
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function getFilteredContentIdeas() {
+  const search = contentFilters.search.toLowerCase();
+  return state.contentIdeas
+    .filter(i => !search || [i.title, i.hook, i.caption, i.notes].some(value => String(value || '').toLowerCase().includes(search)))
+    .filter(i => !contentFilters.platform || i.platform === contentFilters.platform)
+    .filter(i => !contentFilters.status || i.status === contentFilters.status)
+    .filter(i => !contentFilters.type || i.type === contentFilters.type)
+    .sort((a, b) => {
+      if (contentFilters.sort === 'oldest') return getTime(a.createdAt) - getTime(b.createdAt);
+      if (contentFilters.sort === 'due') return (a.dueDate ? getTime(a.dueDate) : Infinity) - (b.dueDate ? getTime(b.dueDate) : Infinity);
+      if (contentFilters.sort === 'status') return CONTENT_STATUSES.indexOf(a.status) - CONTENT_STATUSES.indexOf(b.status) || getTime(b.createdAt) - getTime(a.createdAt);
+      return getTime(b.createdAt) - getTime(a.createdAt);
+    });
+}
+
 // Build forms dynamically to keep structure easy to edit later.
 function buildForms() {
   const streamForm = document.getElementById('streamForm');
@@ -185,8 +206,9 @@ function renderClips() {
 
 function renderContent() {
   const holder = document.getElementById('contentList');
+  const filteredIdeas = getFilteredContentIdeas();
   const columns = CONTENT_STATUSES.map(status => {
-    const ideas = state.contentIdeas.filter(i => i.status === status);
+    const ideas = filteredIdeas.filter(i => i.status === status);
     const cards = ideas.length ? ideas.map(i => `
       <article class="item">
         <h3>${escapeHtml(i.title || '(Untitled idea)')}</h3>
@@ -199,7 +221,9 @@ function renderContent() {
     return `<section class="kanban-column"><h3>${escapeHtml(status)} (${ideas.length})</h3><div class="kanban-stack">${cards}</div></section>`;
   });
   holder.innerHTML = state.contentIdeas.length ? columns.join('') : '<p class="small">No content ideas yet.</p>';
+  if (state.contentIdeas.length && !filteredIdeas.length) holder.innerHTML = '<p class="small">No content ideas match the current filters.</p>';
 }
+
 
 function renderDashboard() {
   document.getElementById('kpiClips').textContent = state.clips.length;
@@ -318,6 +342,20 @@ function wireEvents() {
     const i = state.contentIdeas.find(x => x.id === editContentId); if (!i) return;
     Object.assign(i, normalizeContentIdea({ ...i, title: content_title.value.trim(), platform: content_platform.value, type: content_type.value, hook: content_hook.value.trim(), caption: content_caption.value.trim(), notes: content_notes.value.trim(), status: content_status.value, dueDate: content_dueDate.value, postedUrl: content_postedUrl.value.trim(), updatedAt: new Date().toISOString() }));
     editContentId = null; document.getElementById('updateContent').disabled = true; contentForm.reset(); saveState();
+  };
+
+  ['search','platform','status','type','sort'].forEach(key => {
+    const control = document.getElementById('contentFilter_'+key);
+    control.oninput = control.onchange = () => {
+      contentFilters[key] = control.value;
+      renderContent();
+    };
+  });
+
+  document.getElementById('clearContentFilters').onclick = () => {
+    Object.assign(contentFilters, { search: '', platform: '', status: '', type: '', sort: 'newest' });
+    ['search','platform','status','type','sort'].forEach(key => document.getElementById('contentFilter_'+key).value = contentFilters[key]);
+    renderContent();
   };
 
   const hooks = [
