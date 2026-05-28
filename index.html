@@ -32,14 +32,25 @@
 
       <section class="card">
         <h2>5) Hook & Caption Helper</h2>
+        <div class="row two">
+          <div class="field"><label for="helperPlatform">Platform</label><select id="helperPlatform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>YouTube Video</option><option>Twitch</option><option>Other</option></select></div>
+          <div class="field"><label for="helperType">Content type</label><select id="helperType"><option>stream clip</option><option>hot lap</option><option>tutorial</option><option>reaction</option><option>car build</option><option>meme</option><option>behind the scenes</option><option>other</option></select></div>
+        </div>
+        <div class="row two">
+          <div class="field"><label for="helperVibe">Vibe/tone</label><select id="helperVibe"><option>hype</option><option>funny</option><option>educational</option><option>cinematic</option><option>casual</option></select></div>
+          <div class="field"><label for="helperTopic">Topic/title</label><input id="helperTopic" type="text" placeholder="New wheel setup, first race, wild save..."></div>
+        </div>
+        <div class="field"><label for="helperTakeaway">Key moment or takeaway</label><input id="helperTakeaway" type="text" placeholder="What happened, what viewers learn, or why it matters"></div>
         <div class="actions">
-          <button type="button" id="genHook" class="primary">Generate Hook</button>
+          <button type="button" id="genHook" class="primary">Generate 5 Hooks</button>
           <button type="button" id="genCaption" class="alt">Generate Caption</button>
+          <button type="button" id="genHashtags" class="alt">Generate Hashtags</button>
           <button type="button" id="copyHelper" class="ghost">Copy Text</button>
         </div>
+        <div id="hookOptions" class="hook-options" aria-live="polite"></div>
         <div class="field" style="margin-top:10px">
           <label for="helperOutput">Generated text</label>
-          <textarea id="helperOutput" placeholder="Generated hook/caption appears here..."></textarea>
+          <textarea id="helperOutput" placeholder="Generated hooks, caption, or hashtags appear here..."></textarea>
         </div>
       </section>
 
