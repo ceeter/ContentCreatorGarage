@@ -76,6 +76,7 @@ function normalizeContentIdea(idea = {}) {
     notes: safeIdea.notes || '',
     dueDate: safeIdea.dueDate || '',
     postedUrl: safeIdea.postedUrl || '',
+    sourceClipId: safeIdea.sourceClipId || '',
     createdAt: safeIdea.createdAt || nowIso,
     updatedAt: safeIdea.updatedAt || nowIso
   };
@@ -129,6 +130,11 @@ function formatBackupTimestamp(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
 }
 
+function generateHookFromClip(clip) {
+  const title = clip.title || clip.type || 'this clip';
+  return `POV: ${title} turned into a must-post ${clip.type || 'stream clip'} moment.`;
+}
+
 // Build forms dynamically to keep structure easy to edit later.
 function buildForms() {
   const streamForm = document.getElementById('streamForm');
@@ -165,13 +171,16 @@ function renderStreamForm() {
 
 function renderClips() {
   const holder = document.getElementById('clipList');
-  holder.innerHTML = state.clips.length ? state.clips.map(c => `
+  holder.innerHTML = state.clips.length ? state.clips.map(c => {
+    const hasContentIdea = state.contentIdeas.some(i => i.sourceClipId === c.id);
+    return `
     <article class="item">
       <h3>${escapeHtml(c.title || '(Untitled clip)')}</h3>
       <div class="meta"><span>${escapeHtml(c.timestamp || 'No time')}</span><span>${escapeHtml(c.type)}</span><span class="pill ${c.priority==='high'?'high':''}">${escapeHtml(c.priority)}</span><span class="pill ${c.status==='posted'?'posted':''}">${escapeHtml(c.status)}</span></div>
       <p>${escapeHtml(c.description || '')}</p>
-      <div class="actions"><button type="button" onclick="startEditClip('${c.id}')">Edit clip</button><button type="button" class="danger" onclick="deleteClip('${c.id}')">Delete clip</button></div>
-    </article>`).join('') : '<p class="small">No clips logged yet.</p>';
+      <div class="actions"><button type="button" onclick="startEditClip('${c.id}')">Edit clip</button><button type="button" class="danger" onclick="deleteClip('${c.id}')">Delete clip</button><button type="button" class="primary" onclick="turnClipIntoContentIdea('${c.id}')" ${hasContentIdea ? 'disabled' : ''}>${hasContentIdea ? 'Content idea created' : 'Turn into Content Idea'}</button></div>
+    </article>`;
+  }).join('') : '<p class="small">No clips logged yet.</p>';
 }
 
 function renderContent() {
@@ -219,6 +228,29 @@ window.startEditClip = function(id) {
 window.deleteClip = function(id) {
   state.clips = state.clips.filter(c => c.id !== id);
   if (editClipId === id) editClipId = null;
+  saveState();
+};
+
+window.turnClipIntoContentIdea = function(id) {
+  const clip = state.clips.find(c => c.id === id); if (!clip) return;
+  if (state.contentIdeas.some(i => i.sourceClipId === id)) {
+    alert('A content idea was already created from this clip.');
+    return;
+  }
+  const nowIso = new Date().toISOString();
+  state.contentIdeas.unshift(normalizeContentIdea({
+    id: uid(),
+    title: clip.title || '(Untitled clip)',
+    platform: 'TikTok',
+    type: 'stream clip',
+    status: 'recorded',
+    hook: generateHookFromClip(clip),
+    caption: clip.description ? `Clip description: ${clip.description}` : '',
+    notes: `Original clip timestamp: ${clip.timestamp || 'No time'}\nPriority: ${clip.priority || 'medium'}`,
+    sourceClipId: id,
+    createdAt: nowIso,
+    updatedAt: nowIso
+  }));
   saveState();
 };
 
