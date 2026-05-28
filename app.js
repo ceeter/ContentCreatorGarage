@@ -1,12 +1,16 @@
 // Creator Race Control app logic with localStorage persistence.
 
 // State
+const APP_VERSION = '1.1.0';
 const STORAGE_KEY = 'creatorRaceControlData_v1';
 
 const CONTENT_STATUSES = ['idea','to record','recorded','editing','ready to post','scheduled','posted'];
 
+const defaultStreamPlan = { title:'', platform:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'', createdAt:'', updatedAt:'' };
+
 const defaultState = {
-  streamPlan: { title:'', platform:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'' },
+  appVersion: APP_VERSION,
+  streamPlan: { ...defaultStreamPlan },
   clips: [],
   contentIdeas: []
 };
@@ -28,31 +32,79 @@ function createField(name, label, type='text') {
 
 
 // Storage
-function normalizeContentIdea(idea = {}) {
+function normalizeStreamPlan(plan = {}) {
   const nowIso = new Date().toISOString();
-  const status = CONTENT_STATUSES.includes(idea.status) ? idea.status : 'idea';
+  const safePlan = isPlainObject(plan) ? plan : {};
   return {
-    id: idea.id || uid(),
-    title: idea.title || '',
-    platform: idea.platform || 'TikTok',
-    type: idea.type || 'stream clip',
-    status,
-    hook: idea.hook || '',
-    caption: idea.caption || '',
-    notes: idea.notes || '',
-    dueDate: idea.dueDate || '',
-    postedUrl: idea.postedUrl || '',
-    createdAt: idea.createdAt || nowIso,
-    updatedAt: idea.updatedAt || nowIso
+    ...safePlan,
+    ...streamFields.reduce((fields, [key]) => ({ ...fields, [key]: safePlan[key] || '' }), {}),
+    createdAt: safePlan.createdAt || nowIso,
+    updatedAt: safePlan.updatedAt || nowIso
   };
 }
 
+function normalizeClip(clip = {}) {
+  const nowIso = new Date().toISOString();
+  const safeClip = isPlainObject(clip) ? clip : {};
+  return {
+    ...safeClip,
+    id: safeClip.id || uid(),
+    timestamp: safeClip.timestamp || '',
+    title: safeClip.title || '',
+    description: safeClip.description || '',
+    type: safeClip.type || 'other',
+    priority: safeClip.priority || 'medium',
+    status: safeClip.status || 'needs edit',
+    createdAt: safeClip.createdAt || nowIso,
+    updatedAt: safeClip.updatedAt || nowIso
+  };
+}
+
+function normalizeContentIdea(idea = {}) {
+  const nowIso = new Date().toISOString();
+  const safeIdea = isPlainObject(idea) ? idea : {};
+  const status = CONTENT_STATUSES.includes(safeIdea.status) ? safeIdea.status : 'idea';
+  return {
+    ...safeIdea,
+    id: safeIdea.id || uid(),
+    title: safeIdea.title || '',
+    platform: safeIdea.platform || 'TikTok',
+    type: safeIdea.type || 'stream clip',
+    status,
+    hook: safeIdea.hook || '',
+    caption: safeIdea.caption || '',
+    notes: safeIdea.notes || '',
+    dueDate: safeIdea.dueDate || '',
+    postedUrl: safeIdea.postedUrl || '',
+    createdAt: safeIdea.createdAt || nowIso,
+    updatedAt: safeIdea.updatedAt || nowIso
+  };
+}
+
+function migrateState(rawState) {
+  const safeState = isPlainObject(rawState) ? rawState : {};
+  const migrated = { ...structuredClone(defaultState), ...safeState };
+  migrated.appVersion = APP_VERSION;
+  migrated.streamPlan = normalizeStreamPlan(safeState.streamPlan);
+  migrated.clips = Array.isArray(safeState.clips) ? safeState.clips.map(normalizeClip) : [];
+  migrated.contentIdeas = Array.isArray(safeState.contentIdeas) ? safeState.contentIdeas.map(normalizeContentIdea) : [];
+  return migrated;
+}
+
 function normalizeState(rawState) {
-  const merged = { ...structuredClone(defaultState), ...(rawState || {}) };
-  if (!Array.isArray(merged.clips)) merged.clips = [];
-  if (!Array.isArray(merged.contentIdeas)) merged.contentIdeas = [];
-  merged.contentIdeas = merged.contentIdeas.map(normalizeContentIdea);
-  return merged;
+  return migrateState(rawState);
+}
+
+function validateImportData(parsed) {
+  if (!isPlainObject(parsed)) throw new Error('Backup must be a JSON object.');
+  if ('streamPlan' in parsed && !isPlainObject(parsed.streamPlan)) throw new Error('streamPlan must be an object.');
+  if ('clips' in parsed && !Array.isArray(parsed.clips)) throw new Error('clips must be an array.');
+  if ('contentIdeas' in parsed && !Array.isArray(parsed.contentIdeas)) throw new Error('contentIdeas must be an array.');
+  return true;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function loadState() {
@@ -65,11 +117,17 @@ function loadState() {
 }
 
 function saveState() {
+  state.appVersion = APP_VERSION;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   renderAll();
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function formatBackupTimestamp(date) {
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
+}
 
 // Build forms dynamically to keep structure easy to edit later.
 function buildForms() {
@@ -188,7 +246,10 @@ window.deleteContent = function(id) {
 
 function wireEvents() {
   document.getElementById('saveStream').onclick = () => {
+    const nowIso = new Date().toISOString();
     streamFields.forEach(([k]) => state.streamPlan[k] = document.getElementById('stream_'+k).value.trim());
+    state.streamPlan.createdAt = state.streamPlan.createdAt || nowIso;
+    state.streamPlan.updatedAt = nowIso;
     saveState();
   };
 
@@ -198,7 +259,8 @@ function wireEvents() {
   };
 
   document.getElementById('addClip').onclick = () => {
-    const clip = { id: uid(), timestamp: clip_timestamp.value.trim(), title: clip_title.value.trim(), description: clip_description.value.trim(), type: clip_type.value, priority: clip_priority.value, status: clip_status.value };
+    const nowIso = new Date().toISOString();
+    const clip = normalizeClip({ id: uid(), timestamp: clip_timestamp.value.trim(), title: clip_title.value.trim(), description: clip_description.value.trim(), type: clip_type.value, priority: clip_priority.value, status: clip_status.value, createdAt: nowIso, updatedAt: nowIso });
     state.clips.unshift(clip);
     clipForm.reset();
     saveState();
@@ -207,7 +269,7 @@ function wireEvents() {
   document.getElementById('updateClip').onclick = () => {
     if (!editClipId) return;
     const c = state.clips.find(x => x.id === editClipId); if (!c) return;
-    Object.assign(c, { timestamp: clip_timestamp.value.trim(), title: clip_title.value.trim(), description: clip_description.value.trim(), type: clip_type.value, priority: clip_priority.value, status: clip_status.value });
+    Object.assign(c, normalizeClip({ ...c, timestamp: clip_timestamp.value.trim(), title: clip_title.value.trim(), description: clip_description.value.trim(), type: clip_type.value, priority: clip_priority.value, status: clip_status.value, updatedAt: new Date().toISOString() }));
     editClipId = null; document.getElementById('updateClip').disabled = true; clipForm.reset(); saveState();
   };
 
@@ -249,10 +311,11 @@ function wireEvents() {
   };
 
   exportBtn.onclick = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const exportState = migrateState(state);
+    const blob = new Blob([JSON.stringify(exportState, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'creator-race-control-backup.json';
+    a.download = `creator-race-control-backup-${formatBackupTimestamp(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -263,7 +326,8 @@ function wireEvents() {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      state = normalizeState(parsed);
+      validateImportData(parsed);
+      state = migrateState(parsed);
       saveState();
       alert('Import successful.');
     } catch {
