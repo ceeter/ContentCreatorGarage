@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creator Race Control</title>
+  <link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🏁 Creator Race Control</h1>
+      <p class="subtitle">Mobile-first race control dashboard for streams, clips, and short-form content workflow.</p>
+    </header>
+
+    <div class="grid">
+      <section class="card full">
+        <h2>1) Dashboard</h2>
+        <div class="kpis">
+          <div class="kpi"><div class="value" id="kpiClips">0</div><div class="label">Total clip logs</div></div>
+          <div class="kpi"><div class="value" id="kpiIdeas">0</div><div class="label">Total content ideas</div></div>
+          <div class="kpi"><div class="value" id="kpiPosted">0</div><div class="label">Posts marked posted</div></div>
+          <div class="kpi"><div class="value" id="kpiStream" style="font-size:1rem">No plan</div><div class="label">Current stream plan summary</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2) Stream Planner</h2>
+        <form id="streamForm"></form>
+      </section>
+
+      <section class="card">
+        <h2>5) Hook & Caption Helper</h2>
+        <div class="actions">
+          <button type="button" id="genHook" class="primary">Generate Hook</button>
+          <button type="button" id="genCaption" class="alt">Generate Caption</button>
+          <button type="button" id="copyHelper" class="ghost">Copy Text</button>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="helperOutput">Generated text</label>
+          <textarea id="helperOutput" placeholder="Generated hook/caption appears here..."></textarea>
+        </div>
+      </section>
+
+      <section class="card full">
+        <h2>3) Clip Logger</h2>
+        <form id="clipForm"></form>
+        <div id="clipList" class="items"></div>
+      </section>
+
+      <section class="card full">
+        <h2>4) Content Queue</h2>
+        <form id="contentForm"></form>
+        <div id="contentList" class="kanban-board"></div>
+      </section>
+
+      <section class="card full">
+        <h2>6) Data Tools</h2>
+        <div class="actions">
+          <button type="button" id="exportBtn" class="primary">Export JSON</button>
+          <button type="button" id="importBtn" class="alt">Import JSON</button>
+          <button type="button" id="clearAllBtn" class="danger">Clear All Data</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json" style="display:none" />
+        <p class="small">Back up your race-control data locally. Import expects the same JSON structure.</p>
+      </section>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
