@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creator Race Control</title>
+  <style>
+    :root {
+      --bg: #0b0f16;
+      --panel: #121a25;
+      --panel-2: #182232;
+      --text: #e9f1ff;
+      --muted: #a6b6cf;
+      --neon: #37d5ff;
+      --neon-2: #8b5cf6;
+      --good: #42d392;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --border: #243248;
+      --shadow: 0 10px 24px rgba(0,0,0,.35);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at 20% 0%, #10203b 0%, var(--bg) 35%) fixed;
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    header {
+      margin-bottom: 14px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(55,213,255,.1), rgba(139,92,246,.08)), var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
+      letter-spacing: .3px;
+    }
+
+    .subtitle { margin: 0; color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 860px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .full { grid-column: 1 / -1; }
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.01), transparent), var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: #bfe8ff;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .kpi {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .kpi .value { font-size: 1.3rem; font-weight: 700; }
+    .kpi .label { color: var(--muted); font-size: .85rem; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .field label { font-size: .85rem; color: #cfe2ff; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #0d1522;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--neon);
+      box-shadow: 0 0 0 2px rgba(55,213,255,.15);
+    }
+
+    textarea { min-height: 80px; resize: vertical; }
+
+    .row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    @media (min-width: 560px) { .row.two { grid-template-columns: 1fr 1fr; } }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-weight: 600;
+      color: var(--text);
+      background: #24344e;
+      cursor: pointer;
+    }
+
+    button.primary { background: linear-gradient(135deg, #00a5cf, #2978ff); }
+    button.alt { background: #2d2452; }
+    button.danger { background: #4a1d2b; border-color: #7a3347; }
+    button.ghost { background: transparent; border-color: var(--border); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    .items {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #0f1828;
+    }
+
+    .item h3 { margin: 0 0 6px; font-size: 1rem; }
+    .meta { color: var(--muted); font-size: .82rem; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .pill {
+      font-size: .75rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 8px;
+    }
+    .pill.high { border-color: #885f16; color: #f7c35e; }
+    .pill.posted { border-color: #237a57; color: #68e0ae; }
+
+    .small { font-size: .82rem; color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🏁 Creator Race Control</h1>
+      <p class="subtitle">Mobile-first race control dashboard for streams, clips, and short-form content workflow.</p>
+    </header>
+
+    <div class="grid">
+      <section class="card full">
+        <h2>1) Dashboard</h2>
+        <div class="kpis">
+          <div class="kpi"><div class="value" id="kpiClips">0</div><div class="label">Total clip logs</div></div>
+          <div class="kpi"><div class="value" id="kpiIdeas">0</div><div class="label">Total content ideas</div></div>
+          <div class="kpi"><div class="value" id="kpiPosted">0</div><div class="label">Posts marked posted</div></div>
+          <div class="kpi"><div class="value" id="kpiStream" style="font-size:1rem">No plan</div><div class="label">Current stream plan summary</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2) Stream Planner</h2>
+        <form id="streamForm"></form>
+      </section>
+
+      <section class="card">
+        <h2>5) Hook & Caption Helper</h2>
+        <div class="actions">
+          <button type="button" id="genHook" class="primary">Generate Hook</button>
+          <button type="button" id="genCaption" class="alt">Generate Caption</button>
+          <button type="button" id="copyHelper" class="ghost">Copy Text</button>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="helperOutput">Generated text</label>
+          <textarea id="helperOutput" placeholder="Generated hook/caption appears here..."></textarea>
+        </div>
+      </section>
+
+      <section class="card full">
+        <h2>3) Clip Logger</h2>
+        <form id="clipForm"></form>
+        <div id="clipList" class="items"></div>
+      </section>
+
+      <section class="card full">
+        <h2>4) Content Queue</h2>
+        <form id="contentForm"></form>
+        <div id="contentList" class="items"></div>
+      </section>
+
+      <section class="card full">
+        <h2>6) Data Tools</h2>
+        <div class="actions">
+          <button type="button" id="exportBtn" class="primary">Export JSON</button>
+          <button type="button" id="importBtn" class="alt">Import JSON</button>
+          <button type="button" id="clearAllBtn" class="danger">Clear All Data</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json" style="display:none" />
+        <p class="small">Back up your race-control data locally. Import expects the same JSON structure.</p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Creator Race Control - single-file app with localStorage persistence.
+    const STORAGE_KEY = 'creatorRaceControlData_v1';
+
+    const defaultState = {
+      streamPlan: { title:'', platform:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'' },
+      clips: [],
+      contentIdeas: []
+    };
+
+    let state = loadState();
+    let editClipId = null;
+    let editContentId = null;
+
+    const streamFields = [
+      ['title','Stream title'],['platform','Platform'],['game','Game'],['car','Car/build'],
+      ['track','Track/activity'],['goals','Goals for tonight'],['challenge','Viewer challenge idea'],['notes','Notes']
+    ];
+
+    function createField(name, label, type='text') {
+      if (type === 'textarea') return `<div class="field"><label for="${name}">${label}</label><textarea id="${name}"></textarea></div>`;
+      return `<div class="field"><label for="${name}">${label}</label><input id="${name}" type="${type}"></div>`;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? { ...defaultState, ...JSON.parse(raw) } : structuredClone(defaultState);
+      } catch {
+        return structuredClone(defaultState);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderAll();
+    }
+
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    // Build forms dynamically to keep structure easy to edit later.
+    function buildForms() {
+      const streamForm = document.getElementById('streamForm');
+      streamForm.innerHTML = streamFields.map(([n,l]) => createField('stream_'+n, l, ['goals','challenge','notes'].includes(n) ? 'textarea' : 'text')).join('') +
+      `<div class="actions"><button type="button" class="primary" id="saveStream">Save stream plan</button><button type="button" class="ghost" id="clearStream">Clear stream plan</button></div>`;
+
+      document.getElementById('clipForm').innerHTML = `
+        <div class="row two">
+          ${createField('clip_timestamp','Timestamp')}
+          ${createField('clip_title','Clip title')}
+        </div>
+        ${createField('clip_description','Description','textarea')}
+        <div class="row two">
+          <div class="field"><label for="clip_type">Clip type</label><select id="clip_type"><option>clean drift</option><option>funny moment</option><option>fail</option><option>tune test</option><option>reaction</option><option>race highlight</option><option>other</option></select></div>
+          <div class="field"><label for="clip_priority">Priority</label><select id="clip_priority"><option>low</option><option>medium</option><option>high</option></select></div>
+        </div>
+        <div class="field"><label for="clip_status">Status</label><select id="clip_status"><option>needs edit</option><option>editing</option><option>edited</option><option>posted</option></select></div>
+        <div class="actions"><button type="button" id="addClip" class="primary">Add clip</button><button type="button" id="updateClip" class="alt" disabled>Edit clip</button></div>`;
+
+      document.getElementById('contentForm').innerHTML = `
+        <div class="row two">${createField('content_title','Content title')}<div class="field"><label for="content_platform">Platform</label><select id="content_platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>YouTube Video</option><option>Other</option></select></div></div>
+        <div class="row two"><div class="field"><label for="content_type">Content type</label><select id="content_type"><option>stream clip</option><option>car photo</option><option>tune video</option><option>before/after</option><option>tutorial</option><option>meme</option><option>other</option></select></div><div class="field"><label for="content_status">Status</label><select id="content_status"><option>idea</option><option>recorded</option><option>editing</option><option>scheduled</option><option>posted</option></select></div></div>
+        ${createField('content_hook','Hook text')}
+        ${createField('content_caption','Caption notes','textarea')}
+        <div class="actions"><button type="button" id="addContent" class="primary">Add content idea</button><button type="button" id="updateContent" class="alt" disabled>Edit idea</button></div>`;
+    }
+
+    function renderStreamForm() {
+      for (const [key] of streamFields) document.getElementById('stream_'+key).value = state.streamPlan[key] || '';
+    }
+
+    function renderClips() {
+      const holder = document.getElementById('clipList');
+      holder.innerHTML = state.clips.length ? state.clips.map(c => `
+        <article class="item">
+          <h3>${escapeHtml(c.title || '(Untitled clip)')}</h3>
+          <div class="meta"><span>${escapeHtml(c.timestamp || 'No time')}</span><span>${escapeHtml(c.type)}</span><span class="pill ${c.priority==='high'?'high':''}">${escapeHtml(c.priority)}</span><span class="pill ${c.status==='posted'?'posted':''}">${escapeHtml(c.status)}</span></div>
+          <p>${escapeHtml(c.description || '')}</p>
+          <div class="actions"><button type="button" onclick="startEditClip('${c.id}')">Edit clip</button><button type="button" class="danger" onclick="deleteClip('${c.id}')">Delete clip</button></div>
+        </article>`).join('') : '<p class="small">No clips logged yet.</p>';
+    }
+
+    function renderContent() {
+      const holder = document.getElementById('contentList');
+      holder.innerHTML = state.contentIdeas.length ? state.contentIdeas.map(i => `
+        <article class="item">
+          <h3>${escapeHtml(i.title || '(Untitled idea)')}</h3>
+          <div class="meta"><span>${escapeHtml(i.platform)}</span><span>${escapeHtml(i.type)}</span><span class="pill ${i.status==='posted'?'posted':''}">${escapeHtml(i.status)}</span></div>
+          <p><strong>Hook:</strong> ${escapeHtml(i.hook || '-')}</p>
+          <p><strong>Caption:</strong> ${escapeHtml(i.caption || '-')}</p>
+          <div class="actions"><button type="button" onclick="startEditContent('${i.id}')">Edit idea</button><button type="button" class="danger" onclick="deleteContent('${i.id}')">Delete idea</button></div>
+        </article>`).join('') : '<p class="small">No content ideas yet.</p>';
+    }
+
+    function renderDashboard() {
+      document.getElementById('kpiClips').textContent = state.clips.length;
+      document.getElementById('kpiIdeas').textContent = state.contentIdeas.length;
+      const posted = state.clips.filter(c => c.status==='posted').length + state.contentIdeas.filter(i => i.status==='posted').length;
+      document.getElementById('kpiPosted').textContent = posted;
+      const s = state.streamPlan;
+      document.getElementById('kpiStream').textContent = s.title ? `${s.title} • ${s.platform || 'Platform?'}` : 'No plan';
+    }
+
+    function renderAll() { renderStreamForm(); renderClips(); renderContent(); renderDashboard(); }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+    }
+
+    // Global handlers for inline card buttons.
+    window.startEditClip = function(id) {
+      const c = state.clips.find(x => x.id === id); if (!c) return;
+      editClipId = id;
+      ['timestamp','title','description','type','priority','status'].forEach(k => document.getElementById('clip_'+k).value = c[k] || '');
+      document.getElementById('updateClip').disabled = false;
+    };
+
+    window.deleteClip = function(id) {
+      state.clips = state.clips.filter(c => c.id !== id);
+      if (editClipId === id) editClipId = null;
+      saveState();
+    };
+
+    window.startEditContent = function(id) {
+      const i = state.contentIdeas.find(x => x.id === id); if (!i) return;
+      editContentId = id;
+      ['title','platform','type','hook','caption','status'].forEach(k => document.getElementById('content_'+k).value = i[k] || '');
+      document.getElementById('updateContent').disabled = false;
+    };
+
+    window.deleteContent = function(id) {
+      state.contentIdeas = state.contentIdeas.filter(i => i.id !== id);
+      if (editContentId === id) editContentId = null;
+      saveState();
+    };
+
+    function wireEvents() {
+      document.getElementById('saveStream').onclick = () => {
+        streamFields.forEach(([k]) => state.streamPlan[k] = document.getElementById('stream_'+k).value.trim());
+        saveState();
+      };
+
+      document.getElementById('clearStream').onclick = () => {
+        state.streamPlan = structuredClone(defaultState.streamPlan);
+        saveState();
+      };
+
+      document.getElementById('addClip').onclick = () => {
+        const clip = { id: uid(), timestamp: clip_timestamp.value.trim(), title: clip_title.value.trim(), description: clip_description.value.trim(), type: clip_type.value, priority: clip_priority.value, status: clip_status.value };
+        state.clips.unshift(clip);
+        clipForm.reset();
+        saveState();
+      };
+
+      document.getElementById('updateClip').onclick = () => {
+        if (!editClipId) return;
+        const c = state.clips.find(x => x.id === editClipId); if (!c) return;
+        Object.assign(c, { timestamp: clip_timestamp.value.trim(), title: clip_title.value.trim(), description: clip_description.value.trim(), type: clip_type.value, priority: clip_priority.value, status: clip_status.value });
+        editClipId = null; document.getElementById('updateClip').disabled = true; clipForm.reset(); saveState();
+      };
+
+      document.getElementById('addContent').onclick = () => {
+        const idea = { id: uid(), title: content_title.value.trim(), platform: content_platform.value, type: content_type.value, hook: content_hook.value.trim(), caption: content_caption.value.trim(), status: content_status.value };
+        state.contentIdeas.unshift(idea);
+        contentForm.reset();
+        saveState();
+      };
+
+      document.getElementById('updateContent').onclick = () => {
+        if (!editContentId) return;
+        const i = state.contentIdeas.find(x => x.id === editContentId); if (!i) return;
+        Object.assign(i, { title: content_title.value.trim(), platform: content_platform.value, type: content_type.value, hook: content_hook.value.trim(), caption: content_caption.value.trim(), status: content_status.value });
+        editContentId = null; document.getElementById('updateContent').disabled = true; contentForm.reset(); saveState();
+      };
+
+      const hooks = [
+        'This tune completely changed the car…',
+        'I finally fixed the drift setup…',
+        'POV: you found the perfect corner entry…',
+        'The cleanest run I’ve had all week.',
+        'From understeer to dialed-in in one session.',
+        'Watch this lap delta drop in real time.'
+      ];
+      const captions = [
+        'Tonight\'s setup notes in the comments. What should I test next?',
+        'Rate this line 1-10. Would you brake later here?',
+        'Built for consistency over one-lap pace—worth it?',
+        'Clip from stream practice. Full session recap coming next.'
+      ];
+
+      genHook.onclick = () => helperOutput.value = hooks[Math.floor(Math.random()*hooks.length)];
+      genCaption.onclick = () => helperOutput.value = captions[Math.floor(Math.random()*captions.length)];
+      copyHelper.onclick = async () => {
+        try { await navigator.clipboard.writeText(helperOutput.value || ''); }
+        catch { alert('Copy failed. You can still select and copy manually.'); }
+      };
+
+      exportBtn.onclick = () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'creator-race-control-backup.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
+
+      importBtn.onclick = () => importFile.click();
+      importFile.onchange = async (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          state = { ...structuredClone(defaultState), ...parsed };
+          saveState();
+          alert('Import successful.');
+        } catch {
+          alert('Import failed. Invalid JSON backup.');
+        }
+        importFile.value = '';
+      };
+
+      clearAllBtn.onclick = () => {
+        if (!confirm('Clear all saved stream, clip, and content data?')) return;
+        state = structuredClone(defaultState);
+        saveState();
+      };
+    }
+
+    buildForms();
+    wireEvents();
+    renderAll();
+  </script>
+</body>
+</html>
