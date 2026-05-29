@@ -146,6 +146,12 @@ function toDateKey(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+function getTodayKey() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return toDateKey(today);
+}
+
 function getNextSevenDays() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -272,10 +278,15 @@ function renderContent() {
 
 
 function renderDashboard() {
+  const weeklyKeys = getNextSevenDays().map(day => day.key);
+  const todayKey = getTodayKey();
   document.getElementById('kpiClips').textContent = state.clips.length;
   document.getElementById('kpiIdeas').textContent = state.contentIdeas.length;
-  const posted = state.clips.filter(c => c.status==='posted').length + state.contentIdeas.filter(i => i.status==='posted').length;
-  document.getElementById('kpiPosted').textContent = posted;
+  document.getElementById('kpiReady').textContent = state.contentIdeas.filter(i => i.status === 'ready to post').length;
+  document.getElementById('kpiScheduled').textContent = state.contentIdeas.filter(i => i.status === 'scheduled').length;
+  document.getElementById('kpiPosted').textContent = state.contentIdeas.filter(i => i.status === 'posted').length;
+  document.getElementById('kpiOverdue').textContent = state.contentIdeas.filter(i => i.dueDate && i.dueDate < todayKey && i.status !== 'posted').length;
+  document.getElementById('kpiWeekPlanned').textContent = state.contentIdeas.filter(i => weeklyKeys.includes(i.dueDate)).length;
   const s = state.streamPlan;
   document.getElementById('kpiStream').textContent = s.title ? `${s.title} • ${s.platform || 'Platform?'}` : 'No plan';
 }
