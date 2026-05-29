@@ -210,6 +210,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 
 .planner-day {
   min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #0f1828;
@@ -236,7 +237,15 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .planner-day li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .planner-day li span { min-width: 0; overflow-wrap: anywhere; }
 
-.quick-add { display: grid; gap: 8px; margin-top: 10px; min-width: 0; }
+.quick-add {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
 .quick-add > * {
   width: 100%;
   max-width: 100%;
@@ -246,6 +255,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .planner-day .quick-add input[type="datetime-local"] {
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   font-size: .9rem;
   overflow: hidden;
