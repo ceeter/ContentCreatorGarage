@@ -464,6 +464,6 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   font-size: .86rem;
 }
 
-@media (min-width: 760px) {
+@media (min-width: 1100px) {
   .stream-form-grid { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: start; }
 }
