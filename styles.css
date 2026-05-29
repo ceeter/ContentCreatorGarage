@@ -243,14 +243,21 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   box-sizing: border-box;
   min-width: 0;
 }
-.quick-add input[type="datetime-local"] {
+.planner-day .quick-add input[type="datetime-local"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: .9rem;
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.quick-add input[type="datetime-local"]::-webkit-date-and-time-value {
+.planner-day .quick-add input[type="datetime-local"]::-webkit-date-and-time-value {
   min-width: 0;
+  overflow: hidden;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .quick-add input[type="datetime-local"]::-webkit-calendar-picker-indicator { flex-shrink: 0; }
 
