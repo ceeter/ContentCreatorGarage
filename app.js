@@ -189,8 +189,12 @@ function getNextSevenDays() {
   });
 }
 
+function formatPlannerDayName(date) {
+  return date.toLocaleDateString(undefined, { weekday: 'long' });
+}
+
 function formatPlannerDate(date) {
-  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function getIdeasDueBetween(dateKeys) {
@@ -307,7 +311,7 @@ function renderWeeklyPlanner() {
     const items = ideaItems || streamItems ? ideaItems + streamItems : '<li class="small">No planned items.</li>';
     return `
       <article class="planner-day">
-        <div class="planner-day-header"><div><h3>${escapeHtml(formatPlannerDate(day.date))}</h3><p class="small mono">${escapeHtml(day.key)}</p></div></div>
+        <div class="planner-day-header"><h3>${escapeHtml(formatPlannerDayName(day.date))}</h3><p class="small mono">${escapeHtml(formatPlannerDate(day.date))}</p></div>
         <div class="quick-add" aria-label="Quick add item for ${escapeHtml(day.key)}">
           <select id="quickAddType_${day.key}" aria-label="Quick add type"><option value="post">Clip/Post</option><option value="stream">Stream</option></select>
           <input id="quickAddDate_${day.key}" type="datetime-local" value="${escapeHtml(day.key)}T12:00" aria-label="Quick add date and time">
