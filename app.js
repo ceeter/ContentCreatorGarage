@@ -33,9 +33,10 @@ const contentFilters = { search: '', platform: '', status: '', type: '', sort: '
 
 function getStreamFieldType(key) { return key === 'dateTime' ? 'datetime-local' : 'text'; }
 
-function createField(name, label, type='text') {
-  if (type === 'textarea') return `<div class="field"><label for="${name}">${label}</label><textarea id="${name}"></textarea></div>`;
-  return `<div class="field"><label for="${name}">${label}</label><input id="${name}" type="${type}"></div>`;
+function createField(name, label, type='text', className='') {
+  const fieldClass = `field${className ? ` ${className}` : ''}`;
+  if (type === 'textarea') return `<div class="${fieldClass}"><label for="${name}">${label}</label><textarea id="${name}"></textarea></div>`;
+  return `<div class="${fieldClass}"><label for="${name}">${label}</label><input id="${name}" type="${type}"></div>`;
 }
 
 
@@ -313,7 +314,7 @@ function buildForms() {
       </section>
       <section class="stream-form-panel">
         <h3>Stream Details</h3>
-        <div class="row two">${createField('stream_platform','Platform')}${createField('stream_dateTime','Stream date/time', 'datetime-local')}</div>
+        <div class="row two">${createField('stream_platform','Platform')}${createField('stream_dateTime','Stream date/time', 'datetime-local', 'stream-date-time-field')}</div>
         <div class="row two">${createField('stream_game','Game (optional)')}${createField('stream_status','Status')}</div>
         <div class="row two">${createField('stream_car','Car/build')}${createField('stream_track','Track/activity')}</div>
         ${createField('stream_goals','Goals (optional)','textarea')}
