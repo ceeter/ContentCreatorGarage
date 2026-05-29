@@ -314,7 +314,7 @@ function renderWeeklyPlanner() {
         <div class="planner-day-header"><h3>${escapeHtml(formatPlannerDayName(day.date))}</h3><p class="small mono">${escapeHtml(formatPlannerDate(day.date))}</p></div>
         <div class="quick-add" aria-label="Quick add item for ${escapeHtml(day.key)}">
           <select id="quickAddType_${day.key}" aria-label="Quick add type"><option value="post">Clip/Post</option><option value="stream">Stream</option></select>
-          <input id="quickAddDate_${day.key}" type="datetime-local" value="${escapeHtml(day.key)}T12:00" aria-label="Quick add date and time">
+          <div class="quick-add-date-wrap"><input id="quickAddDate_${day.key}" type="datetime-local" value="${escapeHtml(day.key)}T12:00" aria-label="Quick add date and time"></div>
           <button type="button" class="primary" onclick="quickAddPlannerItem('${day.key}')">Add item</button>
         </div>
         <ul>${items}</ul>
