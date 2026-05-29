@@ -170,6 +170,11 @@ function getIdeasDueBetween(dateKeys) {
   return state.contentIdeas.filter(i => dateKeys.includes(i.dueDate));
 }
 
+
+function getStatusPillClass(status) {
+  return `status-${String(status || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+}
+
 function getFilteredContentIdeas() {
   const search = contentFilters.search.toLowerCase();
   return state.contentIdeas
@@ -247,7 +252,7 @@ function renderWeeklyPlanner() {
   document.getElementById('weeklyPlanner').innerHTML = days.map(day => {
     const ideas = state.contentIdeas.filter(i => i.dueDate === day.key);
     const items = ideas.length ? ideas.map(i => `
-      <li><span>${escapeHtml(i.title || '(Untitled idea)')}</span><span class="pill ${i.status==='posted'?'posted':''}">${escapeHtml(i.status)}</span></li>`).join('') : '<li class="small">No planned items.</li>';
+      <li><span>${escapeHtml(i.title || '(Untitled idea)')}</span><span class="pill ${getStatusPillClass(i.status)}">${escapeHtml(i.status)}</span></li>`).join('') : '<li class="small">No planned items.</li>';
     return `
       <article class="planner-day">
         <div class="planner-day-header"><div><h3>${escapeHtml(formatPlannerDate(day.date))}</h3><p class="small mono">${escapeHtml(day.key)}</p></div><button type="button" class="primary" onclick="quickAddScheduledContent('${day.key}')">Quick add</button></div>
@@ -264,7 +269,7 @@ function renderContent() {
     const cards = ideas.length ? ideas.map(i => `
       <article class="item">
         <h3>${escapeHtml(i.title || '(Untitled idea)')}</h3>
-        <div class="meta"><span>${escapeHtml(i.platform)}</span><span>${escapeHtml(i.type)}</span><span class="pill ${i.status==='posted'?'posted':''}">${escapeHtml(i.status)}</span></div>
+        <div class="meta"><span>${escapeHtml(i.platform)}</span><span>${escapeHtml(i.type)}</span><span class="pill ${getStatusPillClass(i.status)}">${escapeHtml(i.status)}</span></div>
         <p><strong>Hook:</strong> ${escapeHtml(i.hook || '-')}</p>
         ${i.dueDate ? `<p><strong>Due:</strong> ${escapeHtml(i.dueDate)}</p>` : ''}
         ${i.postedUrl ? `<p><strong>Posted URL:</strong> <a href="${escapeHtml(i.postedUrl)}" target="_blank" rel="noopener noreferrer">Open link</a></p>` : ''}
