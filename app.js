@@ -6,25 +6,29 @@ const STORAGE_KEY = 'creatorRaceControlData_v1';
 
 const CONTENT_STATUSES = ['idea','to record','recorded','editing','ready to post','scheduled','posted'];
 
-const defaultStreamPlan = { title:'', platform:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'', createdAt:'', updatedAt:'' };
+const defaultStreamPlan = { title:'', platform:'', dateTime:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'', status:'planned', createdAt:'', updatedAt:'' };
 
 const defaultState = {
   appVersion: APP_VERSION,
   streamPlan: { ...defaultStreamPlan },
   clips: [],
-  contentIdeas: []
+  contentIdeas: [],
+  plannedStreams: []
 };
 
 // DOM Elements
 const streamFields = [
-  ['title','Stream title'],['platform','Platform'],['game','Game'],['car','Car/build'],
-  ['track','Track/activity'],['goals','Goals for tonight'],['challenge','Viewer challenge idea'],['notes','Notes']
+  ['title','Stream title'],['platform','Platform'],['dateTime','Stream date/time'],['game','Game / category'],['car','Car/build'],
+  ['track','Track/activity'],['goals','Goals for tonight'],['challenge','Viewer challenge idea'],['notes','Notes'],['status','Status']
 ];
 
 let state = loadState();
 let editClipId = null;
 let editContentId = null;
+let editPlannedStreamId = null;
 const contentFilters = { search: '', platform: '', status: '', type: '', sort: 'newest' };
+
+function getStreamFieldType(key) { return key === 'dateTime' ? 'datetime-local' : 'text'; }
 
 function createField(name, label, type='text') {
   if (type === 'textarea') return `<div class="field"><label for="${name}">${label}</label><textarea id="${name}"></textarea></div>`;
@@ -61,6 +65,27 @@ function normalizeClip(clip = {}) {
   };
 }
 
+function normalizePlannedStream(stream = {}) {
+  const nowIso = new Date().toISOString();
+  const safeStream = isPlainObject(stream) ? stream : {};
+  return {
+    ...safeStream,
+    id: safeStream.id || uid(),
+    title: safeStream.title || 'Untitled Stream',
+    platform: safeStream.platform || '',
+    dateTime: safeStream.dateTime || '',
+    game: safeStream.game || '',
+    car: safeStream.car || '',
+    track: safeStream.track || '',
+    goals: safeStream.goals || '',
+    challenge: safeStream.challenge || '',
+    notes: safeStream.notes || '',
+    status: safeStream.status || 'planned',
+    createdAt: safeStream.createdAt || nowIso,
+    updatedAt: safeStream.updatedAt || nowIso
+  };
+}
+
 function normalizeContentIdea(idea = {}) {
   const nowIso = new Date().toISOString();
   const safeIdea = isPlainObject(idea) ? idea : {};
@@ -90,6 +115,7 @@ function migrateState(rawState) {
   migrated.streamPlan = normalizeStreamPlan(safeState.streamPlan);
   migrated.clips = Array.isArray(safeState.clips) ? safeState.clips.map(normalizeClip) : [];
   migrated.contentIdeas = Array.isArray(safeState.contentIdeas) ? safeState.contentIdeas.map(normalizeContentIdea) : [];
+  migrated.plannedStreams = Array.isArray(safeState.plannedStreams) ? safeState.plannedStreams.map(normalizePlannedStream) : [];
   return migrated;
 }
 
@@ -102,6 +128,7 @@ function validateImportData(parsed) {
   if ('streamPlan' in parsed && !isPlainObject(parsed.streamPlan)) throw new Error('streamPlan must be an object.');
   if ('clips' in parsed && !Array.isArray(parsed.clips)) throw new Error('clips must be an array.');
   if ('contentIdeas' in parsed && !Array.isArray(parsed.contentIdeas)) throw new Error('contentIdeas must be an array.');
+  if ('plannedStreams' in parsed && !Array.isArray(parsed.plannedStreams)) throw new Error('plannedStreams must be an array.');
   return true;
 }
 
@@ -170,6 +197,14 @@ function getIdeasDueBetween(dateKeys) {
   return state.contentIdeas.filter(i => dateKeys.includes(i.dueDate));
 }
 
+function getStreamDateKey(stream) {
+  return String(stream.dateTime || '').slice(0, 10);
+}
+
+function getStreamsDueBetween(dateKeys) {
+  return state.plannedStreams.filter(stream => dateKeys.includes(getStreamDateKey(stream)));
+}
+
 
 function getStatusPillClass(status) {
   return `status-${String(status || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
@@ -193,8 +228,9 @@ function getFilteredContentIdeas() {
 // Build forms dynamically to keep structure easy to edit later.
 function buildForms() {
   const streamForm = document.getElementById('streamForm');
-  streamForm.innerHTML = streamFields.map(([n,l]) => createField('stream_'+n, l, ['goals','challenge','notes'].includes(n) ? 'textarea' : 'text')).join('') +
-  `<div class="actions"><button type="button" class="primary" id="saveStream">Save stream plan</button><button type="button" class="ghost" id="clearStream">Clear stream plan</button></div>`;
+  streamForm.innerHTML = streamFields.map(([n,l]) => createField('stream_'+n, l, ['goals','challenge','notes'].includes(n) ? 'textarea' : getStreamFieldType(n))).join('') +
+  `<div class="actions"><button type="button" class="primary" id="saveStream">Save stream plan</button><button type="button" class="alt" id="updatePlannedStream" disabled>Edit planned stream</button><button type="button" class="ghost" id="clearStream">Clear stream plan</button></div>
+  <div id="plannedStreamList" class="items"></div>`;
 
   document.getElementById('clipForm').innerHTML = `
     <div class="row two">
@@ -224,6 +260,17 @@ function renderStreamForm() {
   for (const [key] of streamFields) document.getElementById('stream_'+key).value = state.streamPlan[key] || '';
 }
 
+function renderPlannedStreams() {
+  const holder = document.getElementById('plannedStreamList');
+  holder.innerHTML = state.plannedStreams.length ? state.plannedStreams.map(stream => `
+    <article class="item">
+      <h3>${escapeHtml(stream.title || 'Untitled Stream')}</h3>
+      <div class="meta"><span>${escapeHtml(stream.dateTime || 'No date')}</span><span>${escapeHtml(stream.game || 'No category')}</span><span class="pill">${escapeHtml(stream.status || 'planned')}</span></div>
+      <p>${escapeHtml(stream.notes || '')}</p>
+      <div class="actions"><button type="button" onclick="startEditPlannedStream('${stream.id}')">Edit stream</button><button type="button" class="danger" onclick="deletePlannedStream('${stream.id}')">Delete stream</button></div>
+    </article>`).join('') : '<p class="small">No planned streams yet.</p>';
+}
+
 function renderClips() {
   const holder = document.getElementById('clipList');
   holder.innerHTML = state.clips.length ? state.clips.map(c => {
@@ -242,20 +289,30 @@ function renderWeeklyPlanner() {
   const days = getNextSevenDays();
   const dayKeys = days.map(day => day.key);
   const weeklyIdeas = getIdeasDueBetween(dayKeys);
+  const weeklyStreams = getStreamsDueBetween(dayKeys);
   const summary = [
     ['Total scheduled this week', weeklyIdeas.filter(i => i.status === 'scheduled').length],
     ['Ready to post', weeklyIdeas.filter(i => i.status === 'ready to post').length],
-    ['Posted this week', weeklyIdeas.filter(i => i.status === 'posted').length]
+    ['Planned streams', weeklyStreams.filter(stream => stream.status === 'planned').length]
   ];
   document.getElementById('weeklySummary').innerHTML = summary.map(([label, value]) => `
     <div class="weekly-stat"><div class="value">${value}</div><div class="label">${label}</div></div>`).join('');
   document.getElementById('weeklyPlanner').innerHTML = days.map(day => {
     const ideas = state.contentIdeas.filter(i => i.dueDate === day.key);
-    const items = ideas.length ? ideas.map(i => `
-      <li><span>${escapeHtml(i.title || '(Untitled idea)')}</span><span class="pill ${getStatusPillClass(i.status)}">${escapeHtml(i.status)}</span></li>`).join('') : '<li class="small">No planned items.</li>';
+    const streams = state.plannedStreams.filter(stream => getStreamDateKey(stream) === day.key);
+    const ideaItems = ideas.map(i => `
+      <li><span>${escapeHtml(i.title || '(Untitled idea)')}</span><span class="pill ${getStatusPillClass(i.status)}">${escapeHtml(i.status)}</span></li>`).join('');
+    const streamItems = streams.map(stream => `
+      <li><span>🎥 ${escapeHtml(stream.title || 'Untitled Stream')}</span><span class="pill">${escapeHtml(stream.status || 'planned')}</span></li>`).join('');
+    const items = ideaItems || streamItems ? ideaItems + streamItems : '<li class="small">No planned items.</li>';
     return `
       <article class="planner-day">
-        <div class="planner-day-header"><div><h3>${escapeHtml(formatPlannerDate(day.date))}</h3><p class="small mono">${escapeHtml(day.key)}</p></div><button type="button" class="primary" onclick="quickAddScheduledContent('${day.key}')">Quick add</button></div>
+        <div class="planner-day-header"><div><h3>${escapeHtml(formatPlannerDate(day.date))}</h3><p class="small mono">${escapeHtml(day.key)}</p></div></div>
+        <div class="quick-add" aria-label="Quick add item for ${escapeHtml(day.key)}">
+          <select id="quickAddType_${day.key}" aria-label="Quick add type"><option value="post">Clip/Post</option><option value="stream">Stream</option></select>
+          <input id="quickAddDate_${day.key}" type="datetime-local" value="${escapeHtml(day.key)}T12:00" aria-label="Quick add date and time">
+          <button type="button" class="primary" onclick="quickAddPlannerItem('${day.key}')">Add item</button>
+        </div>
         <ul>${items}</ul>
       </article>`;
   }).join('');
@@ -291,12 +348,12 @@ function renderDashboard() {
   document.getElementById('kpiScheduled').textContent = state.contentIdeas.filter(i => i.status === 'scheduled').length;
   document.getElementById('kpiPosted').textContent = state.contentIdeas.filter(i => i.status === 'posted').length;
   document.getElementById('kpiOverdue').textContent = state.contentIdeas.filter(i => i.dueDate && i.dueDate < todayKey && i.status !== 'posted').length;
-  document.getElementById('kpiWeekPlanned').textContent = state.contentIdeas.filter(i => weeklyKeys.includes(i.dueDate)).length;
-  const s = state.streamPlan;
-  document.getElementById('kpiStream').textContent = s.title ? `${s.title} • ${s.platform || 'Platform?'}` : 'No plan';
+  document.getElementById('kpiWeekPlanned').textContent = state.contentIdeas.filter(i => weeklyKeys.includes(i.dueDate)).length + state.plannedStreams.filter(stream => weeklyKeys.includes(getStreamDateKey(stream))).length;
+  const nextStream = state.plannedStreams.find(stream => getStreamDateKey(stream) >= todayKey) || state.streamPlan;
+  document.getElementById('kpiStream').textContent = nextStream.title ? `${nextStream.title} • ${nextStream.platform || nextStream.game || 'Details?'}` : 'No plan';
 }
 
-function renderAll() { renderStreamForm(); renderClips(); renderWeeklyPlanner(); renderContent(); renderDashboard(); }
+function renderAll() { renderStreamForm(); renderPlannedStreams(); renderClips(); renderWeeklyPlanner(); renderContent(); renderDashboard(); }
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -340,17 +397,43 @@ window.turnClipIntoContentIdea = function(id) {
   saveState();
 };
 
-window.quickAddScheduledContent = function(dueDate) {
+window.quickAddPlannerItem = function(dayKey) {
+  const type = document.getElementById('quickAddType_'+dayKey).value;
+  const dateTime = document.getElementById('quickAddDate_'+dayKey).value || `${dayKey}T12:00`;
   const nowIso = new Date().toISOString();
-  state.contentIdeas.unshift(normalizeContentIdea({
-    id: uid(),
-    title: 'New scheduled post',
-    platform: 'TikTok',
-    status: 'scheduled',
-    dueDate,
-    createdAt: nowIso,
-    updatedAt: nowIso
-  }));
+  if (type === 'stream') {
+    state.plannedStreams.unshift(normalizePlannedStream({
+      id: uid(),
+      title: 'Untitled Stream',
+      dateTime,
+      status: 'planned',
+      createdAt: nowIso,
+      updatedAt: nowIso
+    }));
+  } else {
+    state.contentIdeas.unshift(normalizeContentIdea({
+      id: uid(),
+      title: 'New scheduled post',
+      platform: 'TikTok',
+      status: 'scheduled',
+      dueDate: dateTime.slice(0, 10) || dayKey,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    }));
+  }
+  saveState();
+};
+
+window.startEditPlannedStream = function(id) {
+  const stream = state.plannedStreams.find(x => x.id === id); if (!stream) return;
+  editPlannedStreamId = id;
+  streamFields.forEach(([key]) => document.getElementById('stream_'+key).value = stream[key] || '');
+  document.getElementById('updatePlannedStream').disabled = false;
+};
+
+window.deletePlannedStream = function(id) {
+  state.plannedStreams = state.plannedStreams.filter(stream => stream.id !== id);
+  if (editPlannedStreamId === id) editPlannedStreamId = null;
   saveState();
 };
 
@@ -385,8 +468,22 @@ function wireEvents() {
     saveState();
   };
 
+  document.getElementById('updatePlannedStream').onclick = () => {
+    if (!editPlannedStreamId) return;
+    const stream = state.plannedStreams.find(x => x.id === editPlannedStreamId); if (!stream) return;
+    const values = {};
+    streamFields.forEach(([key]) => values[key] = document.getElementById('stream_'+key).value.trim());
+    Object.assign(stream, normalizePlannedStream({ ...stream, ...values, updatedAt: new Date().toISOString() }));
+    editPlannedStreamId = null;
+    document.getElementById('updatePlannedStream').disabled = true;
+    streamForm.reset();
+    saveState();
+  };
+
   document.getElementById('clearStream').onclick = () => {
     state.streamPlan = structuredClone(defaultState.streamPlan);
+    editPlannedStreamId = null;
+    document.getElementById('updatePlannedStream').disabled = true;
     saveState();
   };
 
