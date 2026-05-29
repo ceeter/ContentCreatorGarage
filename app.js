@@ -7,10 +7,12 @@ const STORAGE_KEY = 'creatorRaceControlData_v1';
 const CONTENT_STATUSES = ['idea','to record','recorded','editing','ready to post','scheduled','posted'];
 
 const defaultStreamPlan = { title:'', caption:'', tags:'', platform:'', dateTime:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'', status:'planned', createdAt:'', updatedAt:'' };
+const defaultClipPromoDraft = { clipTitle:'', clipDescription:'', clipTags:'', clipSourceDescription:'', clipPlatform:'TikTok', clipGame:'', clipTone:'', clipKeyMoment:'' };
 
 const defaultState = {
   appVersion: APP_VERSION,
   streamPlan: { ...defaultStreamPlan },
+  clipPromoDraft: { ...defaultClipPromoDraft },
   clips: [],
   contentIdeas: [],
   plannedStreams: []
@@ -105,8 +107,31 @@ function normalizeContentIdea(idea = {}) {
     dueDate: safeIdea.dueDate || '',
     postedUrl: safeIdea.postedUrl || '',
     sourceClipId: safeIdea.sourceClipId || '',
+    clipTitle: safeIdea.clipTitle || '',
+    clipDescription: safeIdea.clipDescription || '',
+    clipTags: safeIdea.clipTags || '',
+    clipSourceDescription: safeIdea.clipSourceDescription || '',
+    clipPlatform: safeIdea.clipPlatform || safeIdea.platform || 'TikTok',
+    clipGame: safeIdea.clipGame || '',
+    clipTone: safeIdea.clipTone || '',
+    clipKeyMoment: safeIdea.clipKeyMoment || '',
     createdAt: safeIdea.createdAt || nowIso,
     updatedAt: safeIdea.updatedAt || nowIso
+  };
+}
+
+function normalizeClipPromoDraft(draft = {}) {
+  const safeDraft = isPlainObject(draft) ? draft : {};
+  return {
+    ...safeDraft,
+    clipTitle: safeDraft.clipTitle || '',
+    clipDescription: safeDraft.clipDescription || '',
+    clipTags: safeDraft.clipTags || '',
+    clipSourceDescription: safeDraft.clipSourceDescription || '',
+    clipPlatform: safeDraft.clipPlatform || 'TikTok',
+    clipGame: safeDraft.clipGame || '',
+    clipTone: safeDraft.clipTone || '',
+    clipKeyMoment: safeDraft.clipKeyMoment || ''
   };
 }
 
@@ -115,6 +140,7 @@ function migrateState(rawState) {
   const migrated = { ...structuredClone(defaultState), ...safeState };
   migrated.appVersion = APP_VERSION;
   migrated.streamPlan = normalizeStreamPlan(safeState.streamPlan);
+  migrated.clipPromoDraft = normalizeClipPromoDraft(safeState.clipPromoDraft);
   migrated.clips = Array.isArray(safeState.clips) ? safeState.clips.map(normalizeClip) : [];
   migrated.contentIdeas = Array.isArray(safeState.contentIdeas) ? safeState.contentIdeas.map(normalizeContentIdea) : [];
   migrated.plannedStreams = Array.isArray(safeState.plannedStreams) ? safeState.plannedStreams.map(normalizePlannedStream) : [];
@@ -613,100 +639,150 @@ function wireEvents() {
     renderContent();
   };
 
-  const hookTemplates = {
-    hype: [
-      'This {type} went from normal to full send in seconds.',
-      'I did not expect {topic} to turn into this.',
-      'The moment {takeaway} changed the whole run.',
-      'Wait for the part where {takeaway}.',
-      '{platform} needs to see this {type}.'
-    ],
-    funny: [
-      'POV: {topic} had other plans.',
-      'I called this a strategy. The car called it comedy.',
-      'Everything was fine until {takeaway}.',
-      'This {type} is why my chat does not trust me.',
-      'Me: “one clean run.” Also me: {takeaway}.'
-    ],
-    educational: [
-      'Here is what {topic} taught me in one {type}.',
-      'The key detail: {takeaway}.',
-      'If you struggle with {topic}, watch this part first.',
-      'Breaking down why {takeaway} matters.',
-      'One small adjustment made this {type} click.'
-    ],
-    cinematic: [
-      'No commentary needed—just {topic} and the moment everything lined up.',
-      'The calm before {takeaway}.',
-      'Every frame of this {type} felt like a final lap.',
-      '{topic}, but make it movie mode.',
-      'That split second when {takeaway}.'
-    ],
-    casual: [
-      'Quick clip from {topic}.',
-      'This {type} had a little bit of everything.',
-      'Not perfect, but {takeaway}.',
-      'Trying something new with {topic}.',
-      'What would you do differently here?'
-    ]
-  };
-  const captionTemplates = {
-    hype: 'Full-send moment from {topic}. {takeaway}. Would you send it or play it safe?',
-    funny: 'I had a plan for {topic}, then the clip wrote its own punchline. {takeaway}.',
-    educational: 'Small details matter in {topic}. The big takeaway: {takeaway}. Save this for your next run, stream, or edit.',
-    cinematic: '{topic} in focus. {takeaway}. Sometimes the best moments are the ones that feel effortless.',
-    casual: 'Quick {type} for {platform}: {topic}. {takeaway}. What should I try next?'
-  };
-  const hashtagSets = {
-    'stream clip': ['#streamer', '#streamclip', '#gaming', '#creator'],
-    'hot lap': ['#simracing', '#hotlap', '#racing', '#motorsport'],
-    tutorial: ['#tutorial', '#howto', '#creatorTips', '#learn'],
-    reaction: ['#reaction', '#gaming', '#streamer', '#contentcreator'],
-    'car build': ['#carbuild', '#cars', '#simracing', '#garage'],
-    meme: ['#meme', '#gamingmemes', '#carmemes', '#streamer'],
-    'behind the scenes': ['#bts', '#creatorlife', '#streamsetup', '#contentcreator'],
-    other: ['#contentcreator', '#gaming', '#cars', '#streamer']
+  const clipPromoFields = {
+    clipPlatform: helperPlatform,
+    clipGame: helperGame,
+    clipSourceDescription: helperSourceDescription,
+    clipTone: helperTone,
+    clipKeyMoment: helperKeyMoment,
+    clipTitle: helperTitle,
+    clipDescription: helperDescription,
+    clipTags: helperTags
   };
 
-  function helperData() {
-    const topic = helperTopic.value.trim() || 'this run';
-    const takeaway = helperTakeaway.value.trim() || 'the key moment finally clicked';
-    return { platform: helperPlatform.value, type: helperType.value, vibe: helperVibe.value, topic, takeaway };
+  function getClipPromoFormValues() {
+    return {
+      clipPlatform: helperPlatform.value,
+      clipGame: helperGame.value.trim(),
+      clipSourceDescription: helperSourceDescription.value.trim(),
+      clipTone: helperTone.value.trim(),
+      clipKeyMoment: helperKeyMoment.value.trim(),
+      clipTitle: helperTitle.value.trim(),
+      clipDescription: helperDescription.value.trim(),
+      clipTags: helperTags.value.trim()
+    };
   }
 
-  function fillTemplate(template, data) {
-    return template
-      .replaceAll('{platform}', data.platform)
-      .replaceAll('{type}', data.type)
-      .replaceAll('{vibe}', data.vibe)
-      .replaceAll('{topic}', data.topic)
-      .replaceAll('{takeaway}', data.takeaway);
+  function setClipPromoStatus(message = '', isError = false) {
+    clipPromoStatus.textContent = message;
+    clipPromoStatus.className = isError ? 'inline-error' : 'small';
   }
 
-  function renderHookOptions(hooks) {
-    hookOptions.innerHTML = hooks.map(hook => `<button type="button" class="ghost hook-choice">${escapeHtml(hook)}</button>`).join('');
-    hookOptions.querySelectorAll('button').forEach(button => {
-      button.onclick = () => helperOutput.value = button.textContent;
-    });
+  function saveClipPromoDraft() {
+    state.clipPromoDraft = normalizeClipPromoDraft(getClipPromoFormValues());
+    state.appVersion = APP_VERSION;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
-  genHook.onclick = () => {
-    const data = helperData();
-    const hooks = hookTemplates[data.vibe].map(template => fillTemplate(template, data));
-    renderHookOptions(hooks);
-    helperOutput.value = hooks.join('\n');
+  function loadClipPromoDraft() {
+    const draft = normalizeClipPromoDraft(state.clipPromoDraft);
+    Object.entries(clipPromoFields).forEach(([key, element]) => element.value = draft[key] || (key === 'clipPlatform' ? 'TikTok' : ''));
+  }
+
+  function toTitleCase(value) {
+    return value
+      .toLowerCase()
+      .replace(/\b\w/g, letter => letter.toUpperCase());
+  }
+
+  function keywordTags(value) {
+    return value
+      .replace(/[^a-z0-9\s]/gi, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3)
+      .slice(0, 4)
+      .map(word => `#${toTitleCase(word).replace(/\s/g, '')}`);
+  }
+
+  function tagFromText(value) {
+    const clean = value.replace(/[^a-z0-9]+/gi, ' ').trim();
+    return clean ? `#${clean.split(/\s+/).map(toTitleCase).join('')}` : '';
+  }
+
+  function generateClipPromoPlaceholder() {
+    const data = getClipPromoFormValues();
+    if (!data.clipSourceDescription) {
+      setClipPromoStatus('Describe the clip first, then I can generate a title, caption, and tags.', true);
+      return null;
+    }
+
+    const source = data.clipSourceDescription.replace(/\s+/g, ' ');
+    const moment = data.clipKeyMoment || source;
+    const game = data.clipGame;
+    const tone = data.clipTone || 'hype';
+    const platform = data.clipPlatform;
+    const titleSeed = data.clipKeyMoment || source;
+    const titleWords = titleSeed
+      .replace(/[#@]/g, '')
+      .replace(/[^a-z0-9\s]/gi, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 7)
+      .join(' ');
+    const gamePrefix = game && !titleWords.toLowerCase().includes(game.toLowerCase()) ? `${game} ` : '';
+    const title = `${gamePrefix}${toTitleCase(titleWords || 'Clip Highlight')}`.trim();
+    const platformNudge = platform === 'YouTube Shorts' ? 'Drop a comment if you would have held it together.' : 'Would you save it or send it?';
+    const toneLine = tone ? ` ${toTitleCase(tone)} energy all the way through.` : '';
+    const description = `${moment.charAt(0).toUpperCase()}${moment.slice(1)} 😮‍💨${toneLine} ${platformNudge}`.trim();
+    const platformTags = platform === 'TikTok' ? ['#TikTokGaming'] : platform === 'Instagram' ? ['#Reels'] : platform === 'YouTube Shorts' ? ['#Shorts'] : platform === 'Facebook Reels' ? ['#FacebookReels'] : ['#Clip'];
+    const gameTag = game ? [tagFromText(game)] : [];
+    const toneTag = tone ? [tagFromText(tone)] : [];
+    const tags = [...gameTag, ...keywordTags(source), ...toneTag, ...platformTags, '#GamingClip', '#ContentCreator']
+      .filter(Boolean)
+      .filter((tag, index, tags) => tags.indexOf(tag) === index)
+      .slice(0, 8)
+      .join(' ');
+
+    setClipPromoStatus('Generated placeholder promo copy. Edit anything you want before posting.');
+    return { title, description, tags };
+  }
+
+  function applyClipPromo(parts = {}) {
+    if (parts.title !== undefined) helperTitle.value = parts.title;
+    if (parts.description !== undefined) helperDescription.value = parts.description;
+    if (parts.tags !== undefined) helperTags.value = parts.tags;
+    saveClipPromoDraft();
+  }
+
+  Object.values(clipPromoFields).forEach(element => {
+    element.oninput = element.onchange = () => {
+      setClipPromoStatus('');
+      saveClipPromoDraft();
+    };
+  });
+
+  loadClipPromoDraft();
+
+  genAll.onclick = () => {
+    const promo = generateClipPromoPlaceholder();
+    if (!promo) return;
+    applyClipPromo(promo);
   };
-  genCaption.onclick = () => {
-    const data = helperData();
-    helperOutput.value = fillTemplate(captionTemplates[data.vibe], data);
+  genTitle.onclick = () => {
+    const promo = generateClipPromoPlaceholder();
+    if (!promo) return;
+    applyClipPromo({ title: promo.title });
   };
-  genHashtags.onclick = () => {
-    const data = helperData();
-    const platformTags = data.platform === 'Twitch' ? ['#twitch', '#livestream'] : data.platform === 'YouTube Video' ? ['#youtube', '#creator'] : ['#shorts', '#reels'];
-    helperOutput.value = [...hashtagSets[data.type], ...platformTags, `#${data.vibe}`].join(' ');
+  genDescription.onclick = () => {
+    const promo = generateClipPromoPlaceholder();
+    if (!promo) return;
+    applyClipPromo({ description: promo.description });
+  };
+  genTags.onclick = () => {
+    const promo = generateClipPromoPlaceholder();
+    if (!promo) return;
+    applyClipPromo({ tags: promo.tags });
   };
   copyHelper.onclick = async () => {
-    try { await navigator.clipboard.writeText(helperOutput.value || ''); }
+    const copyText = [
+      helperTitle.value.trim() && `Title: ${helperTitle.value.trim()}`,
+      helperDescription.value.trim() && `Description: ${helperDescription.value.trim()}`,
+      helperTags.value.trim() && `Tags: ${helperTags.value.trim()}`
+    ].filter(Boolean).join('\n\n');
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setClipPromoStatus('Copied generated title, description, and tags.');
+    }
     catch { alert('Copy failed. You can still select and copy manually.'); }
   };
 

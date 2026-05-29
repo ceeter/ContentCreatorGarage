@@ -41,26 +41,31 @@
       </section>
 
       <section class="card">
-        <h2>4) Promo Copy Helper</h2>
+        <h2>4) Clip Promo Generator</h2>
         <div class="row two">
-          <div class="field"><label for="helperPlatform">Platform</label><select id="helperPlatform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>YouTube Video</option><option>Twitch</option><option>Other</option></select></div>
-          <div class="field"><label for="helperType">Content type</label><select id="helperType"><option>stream clip</option><option>hot lap</option><option>tutorial</option><option>reaction</option><option>car build</option><option>meme</option><option>behind the scenes</option><option>other</option></select></div>
+          <div class="field"><label for="helperPlatform">Platform</label><select id="helperPlatform"><option>TikTok</option><option>Instagram</option><option>YouTube Shorts</option><option>Facebook Reels</option><option>Other</option></select></div>
+          <div class="field"><label for="helperGame">Game / category (optional)</label><input id="helperGame" type="text" placeholder="Forza, iRacing, car meet, sim racing..."></div>
+        </div>
+        <div class="field">
+          <label for="helperSourceDescription">Clip Description / What happened in the clip</label>
+          <textarea id="helperSourceDescription" class="clip-description-input" placeholder="Describe the clip: what happened, what game/car, funny moment, big save, clean drift, close finish, fail, reaction, etc."></textarea>
         </div>
         <div class="row two">
-          <div class="field"><label for="helperVibe">Vibe/tone</label><select id="helperVibe"><option>hype</option><option>funny</option><option>educational</option><option>cinematic</option><option>casual</option></select></div>
-          <div class="field"><label for="helperTopic">Topic/title</label><input id="helperTopic" type="text" placeholder="New wheel setup, first race, wild save..."></div>
+          <div class="field"><label for="helperTone">Vibe / tone (optional)</label><input id="helperTone" type="text" placeholder="hype, funny, cinematic, casual..."></div>
+          <div class="field"><label for="helperKeyMoment">Key moment or takeaway (optional)</label><input id="helperKeyMoment" type="text" placeholder="Barely saved it from the wall"></div>
         </div>
-        <div class="field"><label for="helperTakeaway">Key moment or takeaway</label><input id="helperTakeaway" type="text" placeholder="What happened, what viewers learn, or why it matters"></div>
-        <div class="actions">
-          <button type="button" id="genHook" class="primary">Generate 5 Hooks</button>
-          <button type="button" id="genCaption" class="alt">Generate Caption</button>
-          <button type="button" id="genHashtags" class="alt">Generate Hashtags</button>
-          <button type="button" id="copyHelper" class="ghost">Copy Text</button>
+        <div class="actions clip-promo-actions">
+          <button type="button" id="genAll" class="primary">Generate All</button>
+          <button type="button" id="genTitle" class="alt">Generate Title</button>
+          <button type="button" id="genDescription" class="alt">Generate Description</button>
+          <button type="button" id="genTags" class="alt">Generate Tags</button>
+          <button type="button" id="copyHelper" class="ghost">Copy All</button>
         </div>
-        <div id="hookOptions" class="hook-options" aria-live="polite"></div>
-        <div class="field" style="margin-top:10px">
-          <label for="helperOutput">Generated text</label>
-          <textarea id="helperOutput" placeholder="Generated promo copy or hashtags appear here..."></textarea>
+        <div id="clipPromoStatus" class="small" aria-live="polite"></div>
+        <div class="clip-promo-output">
+          <div class="field"><label for="helperTitle">Generated Title</label><input id="helperTitle" type="text" placeholder="Generated title appears here..."></div>
+          <div class="field"><label for="helperDescription">Generated Description / Caption</label><textarea id="helperDescription" class="clip-description-output" placeholder="Generated caption appears here..."></textarea></div>
+          <div class="field"><label for="helperTags">Generated Tags</label><textarea id="helperTags" class="clip-tags-output" placeholder="#Tags appear here..."></textarea></div>
         </div>
       </section>
 

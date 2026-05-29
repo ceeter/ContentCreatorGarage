@@ -139,6 +139,43 @@ textarea { min-height: 104px; resize: vertical; }
 .hook-options { display: grid; gap: 8px; margin-top: 10px; }
 .hook-choice { text-align: left; }
 
+
+.clip-description-input {
+  min-height: 112px;
+}
+
+.clip-description-output {
+  min-height: 92px;
+}
+
+.clip-tags-output {
+  min-height: 58px;
+}
+
+.clip-promo-actions button {
+  flex: 1 1 140px;
+}
+
+.clip-promo-output {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#clipPromoStatus {
+  min-height: 1.2em;
+  margin-top: 8px;
+}
+
+@media (min-width: 760px) {
+  .clip-promo-output {
+    grid-template-columns: 1fr 1fr;
+  }
+  .clip-promo-output .field:nth-child(2) {
+    grid-column: 1 / -1;
+  }
+}
+
 .content-filters {
   display: grid;
   grid-template-columns: 1fr;
