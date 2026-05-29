@@ -246,17 +246,28 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   min-width: 0;
   box-sizing: border-box;
 }
-.quick-add > * {
+.quick-add > *,
+.quick-add-date-wrap {
   width: 100%;
   max-width: 100%;
-  box-sizing: border-box;
   min-width: 0;
+  box-sizing: border-box;
+}
+.quick-add-date-wrap {
+  overflow: hidden;
+  border-radius: 10px;
 }
 .planner-day .quick-add input[type="datetime-local"] {
+  display: block;
   width: 100%;
+  inline-size: 100%;
   max-width: 100%;
+  max-inline-size: 100%;
   min-width: 0;
+  min-inline-size: 0;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
   font-size: .9rem;
   overflow: hidden;
   text-overflow: ellipsis;
