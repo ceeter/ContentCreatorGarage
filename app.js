@@ -33,10 +33,11 @@ const contentFilters = { search: '', platform: '', status: '', type: '', sort: '
 
 function getStreamFieldType(key) { return key === 'dateTime' ? 'datetime-local' : 'text'; }
 
-function createField(name, label, type='text', className='') {
+function createField(name, label, type='text', className='', inputClassName='') {
   const fieldClass = `field${className ? ` ${className}` : ''}`;
-  if (type === 'textarea') return `<div class="${fieldClass}"><label for="${name}">${label}</label><textarea id="${name}"></textarea></div>`;
-  return `<div class="${fieldClass}"><label for="${name}">${label}</label><input id="${name}" type="${type}"></div>`;
+  const inputClass = inputClassName ? ` class="${inputClassName}"` : '';
+  if (type === 'textarea') return `<div class="${fieldClass}"><label for="${name}">${label}</label><textarea id="${name}"${inputClass}></textarea></div>`;
+  return `<div class="${fieldClass}"><label for="${name}">${label}</label><input id="${name}" type="${type}"${inputClass}></div>`;
 }
 
 
@@ -314,9 +315,14 @@ function buildForms() {
       </section>
       <section class="stream-form-panel">
         <h3>Stream Details</h3>
-        <div class="row two">${createField('stream_platform','Platform')}${createField('stream_dateTime','Stream date/time', 'datetime-local', 'stream-date-time-field')}</div>
-        <div class="row two">${createField('stream_game','Game (optional)')}${createField('stream_status','Status')}</div>
-        <div class="row two">${createField('stream_car','Car/build')}${createField('stream_track','Track/activity')}</div>
+        <div class="stream-details-grid">
+          ${createField('stream_platform','Platform')}
+          ${createField('stream_dateTime','Stream date/time', 'datetime-local', 'stream-date-time-field', 'stream-date-time-input')}
+          ${createField('stream_game','Game (optional)')}
+          ${createField('stream_status','Status')}
+          ${createField('stream_car','Car/build')}
+          ${createField('stream_track','Track/activity')}
+        </div>
         ${createField('stream_goals','Goals (optional)','textarea')}
         ${createField('stream_challenge','Viewer challenge idea','textarea')}
         ${createField('stream_notes','Notes (optional)','textarea')}

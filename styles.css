@@ -459,7 +459,15 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   grid-template-columns: minmax(0, 1fr);
 }
 
+.stream-details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
 .stream-form-panel .row.two > *,
+.stream-details-grid,
+.stream-details-grid > *,
 .stream-date-time-field,
 .stream-form-panel input,
 .stream-form-panel select,
@@ -469,15 +477,37 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   box-sizing: border-box;
 }
 
-#stream_dateTime {
+.stream-date-time-field {
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  overflow: hidden;
+}
+
+.stream-date-time-input,
+.stream-date-time-field input,
+.stream-date-time-field input[type="datetime-local"] {
+  display: block;
+  width: 100% !important;
+  inline-size: 100% !important;
+  max-width: 100% !important;
+  max-inline-size: 100% !important;
+  min-width: 0 !important;
+  min-inline-size: 0 !important;
   box-sizing: border-box;
 }
 
+.stream-date-time-field input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.stream-date-time-field input[type="datetime-local"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+
 @media (min-width: 560px) {
-  .stream-form-panel .row.two {
+  .stream-form-panel .row.two,
+  .stream-details-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
