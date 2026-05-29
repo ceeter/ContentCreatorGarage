@@ -6,7 +6,7 @@ const STORAGE_KEY = 'creatorRaceControlData_v1';
 
 const CONTENT_STATUSES = ['idea','to record','recorded','editing','ready to post','scheduled','posted'];
 
-const defaultStreamPlan = { title:'', platform:'', dateTime:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'', status:'planned', createdAt:'', updatedAt:'' };
+const defaultStreamPlan = { title:'', caption:'', tags:'', platform:'', dateTime:'', game:'', car:'', track:'', goals:'', challenge:'', notes:'', status:'planned', createdAt:'', updatedAt:'' };
 
 const defaultState = {
   appVersion: APP_VERSION,
@@ -18,8 +18,8 @@ const defaultState = {
 
 // DOM Elements
 const streamFields = [
-  ['title','Stream title'],['platform','Platform'],['dateTime','Stream date/time'],['game','Game / category'],['car','Car/build'],
-  ['track','Track/activity'],['goals','Goals for tonight'],['challenge','Viewer challenge idea'],['notes','Notes'],['status','Status']
+  ['title','Stream Title'],['caption','Caption / Description'],['tags','Tags'],['platform','Platform'],['dateTime','Stream date/time'],['game','Game (optional)'],['car','Car/build'],
+  ['track','Track/activity'],['goals','Goals (optional)'],['challenge','Viewer challenge idea'],['notes','Notes (optional)'],['status','Status']
 ];
 
 let state = loadState();
@@ -71,7 +71,9 @@ function normalizePlannedStream(stream = {}) {
   return {
     ...safeStream,
     id: safeStream.id || uid(),
-    title: safeStream.title || 'Untitled Stream',
+    title: safeStream.title || '',
+    caption: safeStream.caption || '',
+    tags: safeStream.tags || '',
     platform: safeStream.platform || '',
     dateTime: safeStream.dateTime || '',
     game: safeStream.game || '',
@@ -163,6 +165,36 @@ function generateHookFromClip(clip) {
   return `POV: ${title} turned into a must-post ${clip.type || 'stream clip'} moment.`;
 }
 
+async function generateStreamPromo({ game = '', goals = '', notes = '' } = {}) {
+  // Placeholder generator: replace this function body with a real AI API call later.
+  const cleanGame = game.trim();
+  const cleanGoals = goals.trim();
+  const cleanNotes = notes.trim();
+  const focus = cleanGame || 'live creator stream';
+  const goalPhrase = cleanGoals || 'good vibes, big moments, and chat-powered decisions';
+  const notePhrase = cleanNotes ? ` Expect ${cleanNotes}.` : ' Come hang out and help shape the next highlight.';
+  const tagSeed = cleanGame ? cleanGame.replace(/[^a-z0-9]+/gi, ' ').trim().split(/\s+/).slice(0, 2).join('') : 'LiveStream';
+
+  return {
+    title: cleanGame ? `${cleanGame} Live: ${cleanGoals || 'New Goals, Big Plays'}` : 'Live Tonight: Big Plays, Fresh Goals, Good Vibes',
+    caption: `Going live with ${focus}. Tonight's focus: ${goalPhrase}.${notePhrase}`,
+    tags: [`#${tagSeed || 'LiveStream'}`, '#livestream', '#gaming', '#contentcreator', '#streamer'].join(' ')
+  };
+}
+
+function getStreamFormValues() {
+  const values = {};
+  streamFields.forEach(([key]) => values[key] = document.getElementById('stream_'+key).value.trim());
+  return values;
+}
+
+function setStreamPromoStatus(message = '', isError = false) {
+  const status = document.getElementById('streamPromoStatus');
+  if (!status) return;
+  status.textContent = message;
+  status.className = isError ? 'inline-error' : 'small';
+}
+
 function getTime(value) {
   const time = Date.parse(value || '');
   return Number.isNaN(time) ? 0 : time;
@@ -232,9 +264,27 @@ function getFilteredContentIdeas() {
 // Build forms dynamically to keep structure easy to edit later.
 function buildForms() {
   const streamForm = document.getElementById('streamForm');
-  streamForm.innerHTML = streamFields.map(([n,l]) => createField('stream_'+n, l, ['goals','challenge','notes'].includes(n) ? 'textarea' : getStreamFieldType(n))).join('') +
-  `<div class="actions"><button type="button" class="primary" id="saveStream">Save stream plan</button><button type="button" class="alt" id="updatePlannedStream" disabled>Edit planned stream</button><button type="button" class="ghost" id="clearStream">Clear stream plan</button></div>
-  <div id="plannedStreamList" class="items"></div>`;
+  streamForm.innerHTML = `
+    <div class="stream-form-grid">
+      <section class="stream-form-panel">
+        <h3>Stream Promo</h3>
+        ${createField('stream_title','Stream Title')}
+        ${createField('stream_caption','Caption / Description','textarea')}
+        ${createField('stream_tags','Tags')}
+        <div class="actions promo-actions"><button type="button" class="alt" id="generateStreamPromoBtn">Generate Stream Promo</button><span id="streamPromoStatus" class="small" aria-live="polite"></span></div>
+      </section>
+      <section class="stream-form-panel">
+        <h3>Stream Details</h3>
+        <div class="row two">${createField('stream_platform','Platform')}${createField('stream_dateTime','Stream date/time', 'datetime-local')}</div>
+        <div class="row two">${createField('stream_game','Game (optional)')}${createField('stream_status','Status')}</div>
+        <div class="row two">${createField('stream_car','Car/build')}${createField('stream_track','Track/activity')}</div>
+        ${createField('stream_goals','Goals (optional)','textarea')}
+        ${createField('stream_challenge','Viewer challenge idea','textarea')}
+        ${createField('stream_notes','Notes (optional)','textarea')}
+      </section>
+    </div>
+    <div class="actions"><button type="button" class="primary" id="saveStream">Save future stream</button><button type="button" class="alt" id="updatePlannedStream" disabled>Update stream</button><button type="button" class="ghost" id="clearStream">Clear stream details</button></div>
+    <div id="plannedStreamList" class="items"></div>`;
 
   document.getElementById('clipForm').innerHTML = `
     <div class="row two">
@@ -269,8 +319,10 @@ function renderPlannedStreams() {
   holder.innerHTML = state.plannedStreams.length ? state.plannedStreams.map(stream => `
     <article class="item">
       <h3>${escapeHtml(stream.title || 'Untitled Stream')}</h3>
-      <div class="meta"><span>${escapeHtml(stream.dateTime || 'No date')}</span><span>${escapeHtml(stream.game || 'No category')}</span><span class="pill">${escapeHtml(stream.status || 'planned')}</span></div>
-      <p>${escapeHtml(stream.notes || '')}</p>
+      <div class="meta"><span>${escapeHtml(stream.dateTime || 'No date')}</span><span>${escapeHtml(stream.game || 'No game')}</span><span class="pill">${escapeHtml(stream.status || 'planned')}</span></div>
+      ${stream.caption ? `<p><strong>Caption:</strong> ${escapeHtml(stream.caption)}</p>` : ''}
+      ${stream.tags ? `<p><strong>Tags:</strong> ${escapeHtml(stream.tags)}</p>` : ''}
+      ${stream.notes ? `<p><strong>Notes:</strong> ${escapeHtml(stream.notes)}</p>` : ''}
       <div class="actions"><button type="button" onclick="startEditPlannedStream('${stream.id}')">Edit stream</button><button type="button" class="danger" onclick="deletePlannedStream('${stream.id}')">Delete stream</button></div>
     </article>`).join('') : '<p class="small">No planned streams yet.</p>';
 }
@@ -432,6 +484,7 @@ window.startEditPlannedStream = function(id) {
   const stream = state.plannedStreams.find(x => x.id === id); if (!stream) return;
   editPlannedStreamId = id;
   streamFields.forEach(([key]) => document.getElementById('stream_'+key).value = stream[key] || '');
+  setStreamPromoStatus('Editing saved stream.');
   document.getElementById('updatePlannedStream').disabled = false;
 };
 
@@ -464,23 +517,47 @@ window.deleteContent = function(id) {
 };
 
 function wireEvents() {
+  document.getElementById('generateStreamPromoBtn').onclick = async () => {
+    const button = document.getElementById('generateStreamPromoBtn');
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Generating...';
+    setStreamPromoStatus('Generating stream promo...');
+    try {
+      const promo = await generateStreamPromo(getStreamFormValues());
+      document.getElementById('stream_title').value = promo.title || '';
+      document.getElementById('stream_caption').value = promo.caption || '';
+      document.getElementById('stream_tags').value = promo.tags || '';
+      setStreamPromoStatus('Promo generated. Edit anything before saving.');
+    } catch {
+      setStreamPromoStatus('Sorry, stream promo generation failed. Try again or write your own promo details.', true);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  };
+
   document.getElementById('saveStream').onclick = () => {
     const nowIso = new Date().toISOString();
-    streamFields.forEach(([k]) => state.streamPlan[k] = document.getElementById('stream_'+k).value.trim());
-    state.streamPlan.createdAt = state.streamPlan.createdAt || nowIso;
-    state.streamPlan.updatedAt = nowIso;
+    const values = getStreamFormValues();
+    state.plannedStreams.unshift(normalizePlannedStream({ id: uid(), ...values, createdAt: nowIso, updatedAt: nowIso }));
+    state.streamPlan = structuredClone(defaultState.streamPlan);
+    editPlannedStreamId = null;
+    document.getElementById('updatePlannedStream').disabled = true;
+    streamForm.reset();
+    setStreamPromoStatus('Stream saved.');
     saveState();
   };
 
   document.getElementById('updatePlannedStream').onclick = () => {
     if (!editPlannedStreamId) return;
     const stream = state.plannedStreams.find(x => x.id === editPlannedStreamId); if (!stream) return;
-    const values = {};
-    streamFields.forEach(([key]) => values[key] = document.getElementById('stream_'+key).value.trim());
+    const values = getStreamFormValues();
     Object.assign(stream, normalizePlannedStream({ ...stream, ...values, updatedAt: new Date().toISOString() }));
     editPlannedStreamId = null;
     document.getElementById('updatePlannedStream').disabled = true;
     streamForm.reset();
+    setStreamPromoStatus('Stream updated.');
     saveState();
   };
 
@@ -488,6 +565,7 @@ function wireEvents() {
     state.streamPlan = structuredClone(defaultState.streamPlan);
     editPlannedStreamId = null;
     document.getElementById('updatePlannedStream').disabled = true;
+    setStreamPromoStatus('');
     saveState();
   };
 
