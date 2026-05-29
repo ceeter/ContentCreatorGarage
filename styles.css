@@ -201,7 +201,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 
 .weekly-planner {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 10px;
   min-width: 0;
   overflow-x: auto;
@@ -226,29 +226,36 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .planner-day p { margin: 0; }
 .planner-day select,
 .planner-day input,
-.planner-day button { width: 100%; min-width: 0; }
+.planner-day button {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
 .planner-day ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
 .planner-day li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .planner-day li span { min-width: 0; overflow-wrap: anywhere; }
 
-.quick-add { display: grid; gap: 8px; margin-top: 10px; }
-.quick-add button { width: 100%; }
+.quick-add { display: grid; gap: 8px; margin-top: 10px; min-width: 0; }
+.quick-add > * {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.quick-add input[type="datetime-local"] {
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+.quick-add input[type="datetime-local"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+.quick-add input[type="datetime-local"]::-webkit-calendar-picker-indicator { flex-shrink: 0; }
 
 @media (min-width: 700px) {
   .weekly-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .weekly-planner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 900px) {
-  .weekly-planner { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1040px) {
-  .weekly-planner { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1240px) {
-  .weekly-planner { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 }
 
 .items {
