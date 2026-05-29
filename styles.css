@@ -455,6 +455,33 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 #streamForm textarea { min-height: 88px; }
 #stream_caption { min-height: 96px; }
 
+.stream-form-panel .row.two {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stream-form-panel .row.two > *,
+.stream-date-time-field,
+.stream-form-panel input,
+.stream-form-panel select,
+.stream-form-panel textarea {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#stream_dateTime {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 560px) {
+  .stream-form-panel .row.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .promo-actions {
   align-items: center;
 }
