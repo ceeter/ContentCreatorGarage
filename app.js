@@ -28,6 +28,7 @@ let state = loadState();
 let editClipId = null;
 let editContentId = null;
 let editPlannedStreamId = null;
+let streamPromoGenerationId = 0;
 const contentFilters = { search: '', platform: '', status: '', type: '', sort: 'newest' };
 
 function getStreamFieldType(key) { return key === 'dateTime' ? 'datetime-local' : 'text'; }
@@ -221,6 +222,17 @@ function setStreamPromoStatus(message = '', isError = false) {
   status.className = isError ? 'inline-error' : 'small';
 }
 
+function saveStateQuietly() {
+  state.appVersion = APP_VERSION;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function syncStreamPlanDraft() {
+  if (editPlannedStreamId) return;
+  state.streamPlan = normalizeStreamPlan({ ...state.streamPlan, ...getStreamFormValues(), updatedAt: new Date().toISOString() });
+  saveStateQuietly();
+}
+
 function getTime(value) {
   const time = Date.parse(value || '');
   return Number.isNaN(time) ? 0 : time;
@@ -337,6 +349,7 @@ function buildForms() {
 
 // Render Functions
 function renderStreamForm() {
+  if (editPlannedStreamId) return;
   for (const [key] of streamFields) document.getElementById('stream_'+key).value = state.streamPlan[key] || '';
 }
 
@@ -507,6 +520,7 @@ window.quickAddPlannerItem = function(dayKey) {
 };
 
 window.startEditPlannedStream = function(id) {
+  streamPromoGenerationId++;
   const stream = state.plannedStreams.find(x => x.id === id); if (!stream) return;
   editPlannedStreamId = id;
   streamFields.forEach(([key]) => document.getElementById('stream_'+key).value = stream[key] || '');
@@ -543,20 +557,34 @@ window.deleteContent = function(id) {
 };
 
 function wireEvents() {
+  streamFields.forEach(([key]) => {
+    const field = document.getElementById('stream_'+key);
+    field.oninput = field.onchange = () => {
+      setStreamPromoStatus('');
+      syncStreamPlanDraft();
+    };
+  });
+
   document.getElementById('generateStreamPromoBtn').onclick = async () => {
     const button = document.getElementById('generateStreamPromoBtn');
+    if (button.disabled) return;
+    const generationId = ++streamPromoGenerationId;
     const originalText = button.textContent;
     button.disabled = true;
     button.textContent = 'Generating...';
     setStreamPromoStatus('Generating stream promo...');
     try {
       const promo = await generateStreamPromo(getStreamFormValues());
+      if (generationId !== streamPromoGenerationId) return;
       document.getElementById('stream_title').value = promo.title || '';
       document.getElementById('stream_caption').value = promo.caption || '';
       document.getElementById('stream_tags').value = promo.tags || '';
+      syncStreamPlanDraft();
       setStreamPromoStatus('Promo generated. Edit anything before saving.');
     } catch {
-      setStreamPromoStatus('Sorry, stream promo generation failed. Try again or write your own promo details.', true);
+      if (generationId === streamPromoGenerationId) {
+        setStreamPromoStatus('Sorry, stream promo generation failed. Try again or write your own promo details.', true);
+      }
     } finally {
       button.disabled = false;
       button.textContent = originalText;
@@ -564,6 +592,7 @@ function wireEvents() {
   };
 
   document.getElementById('saveStream').onclick = () => {
+    streamPromoGenerationId++;
     const nowIso = new Date().toISOString();
     const values = getStreamFormValues();
     state.plannedStreams.unshift(normalizePlannedStream({ id: uid(), ...values, createdAt: nowIso, updatedAt: nowIso }));
@@ -576,6 +605,7 @@ function wireEvents() {
   };
 
   document.getElementById('updatePlannedStream').onclick = () => {
+    streamPromoGenerationId++;
     if (!editPlannedStreamId) return;
     const stream = state.plannedStreams.find(x => x.id === editPlannedStreamId); if (!stream) return;
     const values = getStreamFormValues();
@@ -588,6 +618,7 @@ function wireEvents() {
   };
 
   document.getElementById('clearStream').onclick = () => {
+    streamPromoGenerationId++;
     state.streamPlan = structuredClone(defaultState.streamPlan);
     editPlannedStreamId = null;
     document.getElementById('updatePlannedStream').disabled = true;
