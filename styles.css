@@ -394,3 +394,39 @@ button:disabled { opacity: .55; cursor: not-allowed; }
     background: rgba(15,24,40,.96);
   }
 }
+
+.stream-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.stream-form-panel {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(55,213,255,.18);
+  border-radius: 12px;
+  background: #0f1828;
+}
+
+.stream-form-panel h3 {
+  margin: 0 0 10px;
+  color: #d9ecff;
+  font-size: .95rem;
+}
+
+#streamForm textarea { min-height: 88px; }
+#stream_caption { min-height: 96px; }
+
+.promo-actions {
+  align-items: center;
+}
+
+.inline-error {
+  color: #fecaca;
+  font-size: .86rem;
+}
+
+@media (min-width: 760px) {
+  .stream-form-grid { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: start; }
+}
